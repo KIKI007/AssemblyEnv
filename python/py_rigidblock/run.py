@@ -43,7 +43,8 @@ def test(queue):
     model = PPO.load(f"models/PPO/{25000}.zip", env)
 
     env.reset()
-    env._part_status = np.array([0, 1, 1, 0, 1, 1, 1, 1])
+    start_part_status = np.array([0, 1, 1, 0, 1, 1, 1, 1])
+    env._part_status = np.copy(start_part_status)
     obs = env._part_status
     env.send()
     for it in range(100):
@@ -52,7 +53,7 @@ def test(queue):
 
         if terminated or truncated:
             #env.reset()
-            env._part_status = np.array([0, 1, 1, 0, 1, 1, 1, 1])
+            env._part_status = np.copy(start_part_status)
             obs = env._part_status
             env.send()
 
