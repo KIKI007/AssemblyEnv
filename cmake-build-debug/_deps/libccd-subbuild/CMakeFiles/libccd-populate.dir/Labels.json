@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/CMakeFiles/libccd-populate"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/CMakeFiles/libccd-populate.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/CMakeFiles/libccd-populate-complete.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-build.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-configure.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-download.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-install.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-mkdir.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-patch.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-test.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/libccd-subbuild/libccd-populate-prefix/src/libccd-populate-stamp/libccd-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"libccd-populate"
+		],
+		"name" : "libccd-populate"
+	}
+}

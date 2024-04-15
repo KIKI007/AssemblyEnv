@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "ext/libccd/src/testsuites/cu",
+		"source" : "cmake-build-debug/_deps/libccd-src/src/testsuites/cu"
+	}
+}

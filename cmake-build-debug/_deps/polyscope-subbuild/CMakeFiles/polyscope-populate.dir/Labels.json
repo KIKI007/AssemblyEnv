@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/CMakeFiles/polyscope-populate"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/CMakeFiles/polyscope-populate.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/CMakeFiles/polyscope-populate-complete.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-build.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-configure.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-download.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-install.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-mkdir.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-patch.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-test.rule"
+		},
+		{
+			"file" : "/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/polyscope-subbuild/polyscope-populate-prefix/src/polyscope-populate-stamp/polyscope-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"polyscope-populate"
+		],
+		"name" : "polyscope-populate"
+	}
+}

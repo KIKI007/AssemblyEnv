@@ -1,0 +1,25 @@
+"/Users/ziqwang/Applications/CLion Nova.app/Contents/bin/cmake/mac/aarch64/bin/cmake" -DCMAKE_BUILD_TYPE=Release "-DCMAKE_MAKE_PROGRAM=/Users/ziqwang/Applications/CLion Nova.app/Contents/bin/ninja/mac/aarch64/ninja" -DPython_EXECUTABLE=/Users/ziqwang/anaconda3/envs/AssemblyEnv/bin/python3.10 -G Ninja -S /Users/ziqwang/Documents/GitHub/AssemblyEnv -B /Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-release
+-- fetching libccd ...
+CMake Deprecation Warning at cmake-build-release/_deps/libccd-src/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- fetching nanobind ...
+-- Found Python: /Users/ziqwang/anaconda3/envs/AssemblyEnv/bin/python3.10 (found suitable version "3.10.14", minimum required is "3.8") found components: Interpreter Development.Module Development.SABIModule 
+-- fetching triangle ...
+CMake Deprecation Warning at cmake-build-release/_deps/triangle-src/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- Found Python: /Users/ziqwang/anaconda3/envs/AssemblyEnv/bin/python3.10 (found suitable version "3.10.14", minimum required is "3.10") found components: Interpreter Development.Module 
+-- Configuring done (0.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-release
