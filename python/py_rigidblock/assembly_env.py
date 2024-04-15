@@ -19,8 +19,8 @@ class AssemblyEnv(gym.Env):
 		self.action_space = Discrete(self.assembly.n_part() - 1)
 		self._part_status = np.zeros(self.assembly.n_part() - 1, dtype=int)
 		self.iter = 0
-		self.NUM_ITER_SEND = 1000
-		self.SEND_TIME = 0.1
+		self.send_time_delay = 1
+		self.render = False
 
 
 	def _get_obs(self):
@@ -32,15 +32,34 @@ class AssemblyEnv(gym.Env):
 		}
 
 	def reset(self, seed=None, options=None):
-		# We need the following line to seed self.np_random
 		super().reset(seed=seed)
 
-		self._part_status = np.zeros(self.assembly.n_part() - 1, dtype=int)
-
+		while True:
+			self._part_status = np.random.randint(2, size=self.assembly.n_part() - 1)
+			if np.sum(self._part_status) < self.assembly.n_part() - 1 and self.assembly.check_stability(self.part_status()) != None:
+				break
+		# self._part_status = np.array([0, 0, 0, 1, 1, 0, 1, 0])
+		# self._part_status = np.zeros(self.assembly.n_part() - 1, dtype=int)
+		# self._part_status[5] = 1
+		# self._part_status[3] = 1
+		# self._part_status[6] = 1
+		#print(f"{self.part_status()}:Init")
 		observation = self._get_obs()
 		info = self._get_info()
+		self.send()
 
 		return observation, info
+
+	# def reset(self, seed=None, options=None):
+	# 	# We need the following line to seed self.np_random
+	# 	super().reset(seed=seed)
+	#
+	# 	self._part_status = np.zeros(self.assembly.n_part() - 1, dtype=int)
+	#
+	# 	observation = self._get_obs()
+	# 	info = self._get_info()
+	#
+	# 	return observation, info
 
 	def part_status(self):
 		status = np.copy(self._part_status)
@@ -55,32 +74,38 @@ class AssemblyEnv(gym.Env):
 		if self._part_status[action] != 0:
 			terminated = True
 			reward = -1
+			if self.render:
+				print(f"{self.part_status()}:Failed")
 		else:
 			self._part_status[action] = 1
 			if self.assembly.check_stability(self.part_status()) == None:
 				terminated = True
 				reward = -1
+				if self.render:
+					print(f"{self.part_status()}:Failed")
 			elif np.sum(self._part_status) == self.assembly.n_part() - 1:
 				terminated = True
 				reward = 1
+				if self.render:
+					print(f"{self.part_status()}:Sucess")
 
 		observation = self._get_obs()
 		info = self._get_info()
-		if terminated != None and self.iter % self.NUM_ITER_SEND == 0:
-			self.send()
 
+		self.send()
 		self.iter = self.iter + 1
 
 		return observation, reward, terminated, False, info
 
 	def send(self):
-		data = {"state": self.part_status()}
-		topic = Topic("/rl/sequence/", Message)
-		tx = MqttTransport(host="localhost")
-		publisher = Publisher(topic, transport=tx)
-		msg = Message(data)
-		publisher.publish(msg)
-		time.sleep(self.SEND_TIME)
+		if self.render:
+			data = {"state": self.part_status()}
+			topic = Topic("/rl/sequence/", Message)
+			tx = MqttTransport(host="localhost")
+			publisher = Publisher(topic, transport=tx)
+			msg = Message(data)
+			publisher.publish(msg)
+			time.sleep(self.send_time_delay)
 
 	def close(self):
 		pass

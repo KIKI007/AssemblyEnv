@@ -1,21 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="VcsDirectoryMappings">
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/json-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/libccd-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/mqtt-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/nanobind-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/nanobind-src/ext/robin_map" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/polyscope-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/polyscope-src/deps/glfw" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/polyscope-src/deps/happly" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/polyscope-src/deps/imgui/imgui" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/quickhull-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/tinyxml2-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/triangle-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/libccd-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/nanobind-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/nanobind-src/ext/robin_map" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/triangle-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
   </component>
 </project>

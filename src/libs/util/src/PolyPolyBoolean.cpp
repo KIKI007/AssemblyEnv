@@ -213,7 +213,7 @@ void PolyPolyBoolean::cleanPath2(Eigen::MatrixXd &points)
     {
         nPoly[id].x() = points(id, 0);
         nPoly[id].y() = points(id, 1);
-        nPoly[id].z();
+        nPoly[id].z() = 0;
     }
     cleanPath(nPoly);
     points = Eigen::MatrixXd(nPoly.size(), 2);

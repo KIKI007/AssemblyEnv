@@ -3,7 +3,6 @@
 //
 #include "util/ConvexCluster.h"
 #include "rigid_block/Part.h"
-
 #include "iostream"
 #include <algorithm>
 #include <unistd.h>
@@ -12,14 +11,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "util/PolyPolyBoolean.h"
-
+#include <iostream>
 namespace rigid_block {
 
-    std::shared_ptr<Part> Part::create_polygon(Eigen::MatrixXd& points, double depth)
+    std::shared_ptr<Part> Part::create_polygon(const Eigen::MatrixXd& points, double depth)
     {
         Eigen::MatrixXd V;
         Eigen::MatrixXi F, E;
-        create_triangles(points, V, F, E, "pzQ");
+        create_triangles(points, V, F, E, "Qpz");
+
         int nV = V.rows();
         int nP = points.rows();
 
@@ -73,16 +73,21 @@ namespace rigid_block {
         return part;
     }
 
-    void Part::create_triangles(Eigen::MatrixXd& points, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXi& E, std::string option)
+    void Part::create_triangles(const Eigen::MatrixXd& points, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXi& E, std::string option)
     {
         //boundary represented by points can be non-convex
         //need triangulation
         util::PolyPolyBoolean poly;
-        poly.cleanPath2(points);
+        Eigen::MatrixXd newpoints = points;
+        poly.cleanPath2(newpoints);
 
-        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> P(points.rows(), 2);
-        for(int id = 0; id < points.rows(); id++) P.row(id) = points.row(id);
-        int N = points.rows();
+        std::vector<double> P;
+        for(int id = 0; id < newpoints.rows(); id++){
+            P.push_back(newpoints(id, 0));
+            P.push_back(newpoints(id, 1));
+        }
+
+        int N = newpoints.rows();
 
         triangulateio in, out;
 
@@ -103,7 +108,8 @@ namespace rigid_block {
         in.numberoftriangles = 0;
         in.numberoftriangleattributes = 0;
         in.triangleattributelist = NULL;
-        std::vector<int> pointmarkerlist;   pointmarkerlist.resize(N * 2, 1);
+        std::vector<int> pointmarkerlist;
+        pointmarkerlist.resize(N * 2, 1);
         in.pointmarkerlist = pointmarkerlist.data();
 
         //holes

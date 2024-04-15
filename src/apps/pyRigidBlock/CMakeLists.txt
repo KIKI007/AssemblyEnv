@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(py_rigidblock)
-find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python 3.9 COMPONENTS Interpreter Development REQUIRED)
 
 set(CRL_TARGET_NAME ${PROJECT_NAME})
 

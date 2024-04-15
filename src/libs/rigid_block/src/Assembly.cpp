@@ -4,8 +4,6 @@
 
 #include "rigid_block/Assembly.h"
 #include "rigid_block/collision.h"
-#include <MacTypes.h>
-
 #include "util/PolyPolyBoolean.h"
 #include "util/ConvexHull2D.h"
 

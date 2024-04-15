@@ -100,7 +100,7 @@ class Assembly2D_GUI(Assembly2D):
 
 		if psim.Button("Check Stability"):
 
-			prob_result = self.check_stability(self.get_gui_status())
+			prob_result = self.check_stability(self.get_status())
 
 			if prob_result != None:
 				self.text = "{:.3e}".format(prob_result)

@@ -5,6 +5,7 @@
 #ifndef PART_H
 #define PART_H
 #include "Eigen/Dense"
+#include <memory>
 #include <vector>
 namespace rigid_block {
     class Part {
@@ -28,10 +29,10 @@ namespace rigid_block {
 
         static std::shared_ptr<Part> create_cuboid(Eigen::Vector3d center, Eigen::Vector3d dimension);
 
-        static std::shared_ptr<Part> create_polygon(Eigen::MatrixXd &points, double depth);
+        static std::shared_ptr<Part> create_polygon(const Eigen::MatrixXd &points, double depth);
 
         static void create_triangles(
-            Eigen::MatrixXd &points,
+            const Eigen::MatrixXd &points,
             Eigen::MatrixXd &V,
             Eigen::MatrixXi &F,
             Eigen::MatrixXi &E,
