@@ -1,3 +1,0 @@
-/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/quickhull-subbuild/CMakeFiles/quickhull-populate.dir
-/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/quickhull-subbuild/CMakeFiles/edit_cache.dir
-/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/quickhull-subbuild/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,8 @@
+__title__ = 'AssemblyEnv'
+__description__ = '...'
+__url__ = 'https://github.com/KIKI007/Assembly-Env'
+__version__ = '0.0.1'
+__author__ = 'Ziqi Wang'
+__author_email__ = 'ziqi.wang@inf.ethz.ch'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2022 Ziqi Wang'

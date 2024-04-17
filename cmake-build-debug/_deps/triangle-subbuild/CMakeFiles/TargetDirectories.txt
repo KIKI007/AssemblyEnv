@@ -1,3 +1,0 @@
-/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/triangle-subbuild/CMakeFiles/triangle-populate.dir
-/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/triangle-subbuild/CMakeFiles/edit_cache.dir
-/Users/ziqwang/Documents/GitHub/AssemblyEnv/cmake-build-debug/_deps/triangle-subbuild/CMakeFiles/rebuild_cache.dir
