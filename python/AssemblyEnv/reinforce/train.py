@@ -5,7 +5,6 @@ from multiprocessing import Process, Queue
 from stable_baselines3 import PPO
 from AssemblyEnv.geometry import Assembly2D
 import time
-
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 import torch as th
 from torch import nn
@@ -29,7 +28,6 @@ class SequenceNetwork(nn.Module):
         last_layer_dim: int = 64,
     ):
         super(SequenceNetwork, self).__init__()
-
         # IMPORTANT:
         # Save output dimensions, used to create the distributions
         self.latent_dim_vf = self.latent_dim_pi = last_layer_dim
@@ -50,12 +48,13 @@ class SequenceNetwork(nn.Module):
         :return: (th.Tensor, th.Tensor) latent_policy, latent_value of the specified network.
             If all layers are shared, then ``latent_policy == latent_value``
         """
-        return self.policy_net(features), self.value_net(features)
+        return self.policy_net(features), self.policy_net(features)
 
     def forward_actor(self, features: th.Tensor) -> th.Tensor:
         return self.policy_net(features)
+
     def forward_critic(self, features: th.Tensor) -> th.Tensor:
-        return self.value_net(features)
+        return self.policy_net(features)
 class SequenceACPolicy(ActorCriticPolicy):
     def __init__(
         self,
@@ -165,18 +164,3 @@ class SequenceACPolicy(ActorCriticPolicy):
     #         th.tensor(0, dtype=p_log_p.dtype, device=p_log_p.device),
     #     )
     #     return -p_log_p.sum(-1)
-
-def train(queue):
-    parts = queue.get()
-
-    assembly = Assembly2D(parts)
-    env = AssemblyPlayground(assembly)
-    TIMESTEP = 1000
-    env.send_time_delay = 0.1
-    env.render = False
-    env.reset()
-
-    model = PPO(SequenceACPolicy, env, verbose=1, tensorboard_log="./logs/")
-    for epoch in range(100):
-        model.learn(total_timesteps=TIMESTEP, tb_log_name="PPO", reset_num_timesteps= (epoch == 0))
-        model.save(f"models/PPO/{epoch}")

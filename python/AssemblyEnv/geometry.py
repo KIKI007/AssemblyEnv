@@ -61,6 +61,8 @@ class Assembly2D:
 			prob.solve(solver=cp.GUROBI, verbose = False, env = self.env)
 		except cp.SolverError:
 			return None
+		if prob.status != 'optimal':
+			return None
 		return prob.value
 
 class Assembly2D_GUI(Assembly2D):

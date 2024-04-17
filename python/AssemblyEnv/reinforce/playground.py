@@ -62,26 +62,21 @@ class AssemblyPlayground(gym.Env):
 		terminated = False
 		reward = 0
 
-		observation = self._get_obs()
-		info = self._get_info()
-
 		if self._part_status[action] != 0:
 			terminated = True
 			reward = -1
-			if self.render:
-				print(f"{self.part_status()}:Failed")
+
 		else:
 			self._part_status[action] = 1
 			if self.assembly.check_stability(self.part_status()) == None:
 				terminated = True
 				reward = -1
-				if self.render:
-					print(f"{self.part_status()}:Failed")
 			elif np.sum(self._part_status) == self.assembly.n_part() - 1:
 				terminated = True
 				reward = 1
-				if self.render:
-					print(f"{self.part_status()}:Sucess")
+
+		observation = self._get_obs()
+		info = self._get_info()
 
 		self.send()
 
