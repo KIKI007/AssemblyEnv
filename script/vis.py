@@ -19,18 +19,17 @@ def test(queue):
     assembly = Assembly2D(parts)
     env = AssemblyPlayground(assembly)
     env.render = True
-    env.send_time_delay = 1
-    model = PPO.load(f"models/PPO_3/{22}", env)
+    env.send_time_delay = 0.2
+    model = PPO.load(f"models/PPO_3/{19}", env)
 
     obs, info = env.reset_random()
     env.send()
-    for it in range(100):
+    while True:
         action, _state = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
 
         if terminated or truncated:
-            return
-            #obs, info = env.reset_random()
+            obs, info = env.reset_random()
 
 
 def update_viewer(msg):
