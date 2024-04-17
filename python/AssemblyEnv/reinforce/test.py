@@ -11,19 +11,12 @@ def test(queue):
     env = AssemblyPlayground(assembly)
     env.render = True
     env.send_time_delay = 1
-    model = PPO.load(f"models/PPO/{25000}.zip", env)
+    model = PPO.load(f"models/PPO/{22}", env)
 
-    env.reset()
-    start_part_status = np.array([0, 1, 1, 0, 1, 1, 1, 1])
-    env._part_status = np.copy(start_part_status)
-    obs = env._part_status
-    env.send()
+    obs, info = env.reset()
     for it in range(100):
         action, _state = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
 
         if terminated or truncated:
-            #env.reset()
-            env._part_status = np.copy(start_part_status)
-            obs = env._part_status
-            env.send()
+            obs, info = env.reset()

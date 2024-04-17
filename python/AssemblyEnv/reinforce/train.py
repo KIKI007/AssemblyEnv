@@ -6,8 +6,6 @@ from stable_baselines3 import PPO
 from AssemblyEnv.geometry import Assembly2D
 import time
 
-def
-
 def train(queue):
     parts = queue.get()
 
