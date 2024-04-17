@@ -1,4 +1,6 @@
 from AssemblyEnv.reinforce.train import train
+from multiprocessing import Process, Queue
+
 
 if __name__ == "__main__":
     # gui()
@@ -11,5 +13,5 @@ if __name__ == "__main__":
              [[4.0, 0.0], [5.0, 0.0], [5.0, 2.0], [4.0, 2.0]],
              [[0.0, 2.0], [5.0, 2.0], [5.0, 3.0], [0.0, 3.0]],
              [[0.0, 5.0], [5.0, 5.0], [5.0, 6.0], [0.0, 6.0]]]
-    queue1.put(parts)
-    train(queue1)
+    queue.put(parts)
+    train(queue)
