@@ -38,6 +38,7 @@ const std::vector<Eigen::Vector3d> &points,
     std::vector<int> groupIDs = computeClusterByPlane(points, normals);
     int select_group_id = 0;
 
+
     ConvexHull2D<double> convexhull;
     out_normal.clear();
     out_points.clear();
