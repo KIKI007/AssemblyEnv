@@ -13,7 +13,7 @@ class Assembly2D:
 		self.contacts = None
 		self.env = gurobipy.Env()
 		self.env.setParam('OutputFlag', 0)
-
+		self.part_colors = []
 
 		if boundaries != None:
 			self.init(boundaries)
@@ -91,8 +91,11 @@ class Assembly2D_GUI(Assembly2D):
 			obj = ps.get_surface_mesh("part{}".format(part_id))
 			if status[part_id] == 2:
 				part.fixed = True
+				obj.set_color((0, 0, 0))
+				obj.set_enabled(True)
 			elif status[part_id] == 1:
 				obj.set_enabled(True)
+				obj.set_color(self.part_colors[part_id])
 			else:
 				obj.set_enabled(False)
 			#self.update_render = True
@@ -118,6 +121,7 @@ class Assembly2D_GUI(Assembly2D):
 		# blocks
 		ps.remove_group("assembly", False)
 		assembly_group = ps.create_group("assembly")
+		self.part_colors = []
 		for part_id in range(self.assembly.n_part()):
 			part = self.assembly.part(part_id)
 			if part.fixed == True:
@@ -126,6 +130,7 @@ class Assembly2D_GUI(Assembly2D):
 			else:
 				obj = ps.register_surface_mesh("part{}".format(part_id), part.V, part.F)
 
+			self.part_colors.append(obj.get_color())
 			obj.set_edge_width(1)
 			obj.add_to_group(assembly_group)
 

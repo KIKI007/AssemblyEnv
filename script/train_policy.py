@@ -1,20 +1,20 @@
-from AssemblyEnv.reinforce.train import SequenceACPolicy
+from AssemblyEnv.reinforce.policy import AssemblyACPolicy
 from AssemblyEnv.geometry import Assembly2D
-from AssemblyEnv.reinforce.playground import AssemblyPlayground
+from AssemblyEnv.reinforce.env import AssemblyPlayground, RobotPlayground
 from multiprocessing import Process, Queue
 from stable_baselines3 import PPO
 def train(queue):
     parts = queue.get()
 
     assembly = Assembly2D(parts)
-    env = AssemblyPlayground(assembly)
+    env = RobotPlayground(assembly)
     env.send_time_delay = 0.1
     env.render = False
     env.reset()
-    model = PPO(SequenceACPolicy, env, verbose=1, tensorboard_log="./logs/")
+    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./logs/")
     for epoch in range(100):
         model.learn(total_timesteps=1000, tb_log_name="PPO", reset_num_timesteps= (epoch == 0))
-        model.save(f"models/PPO_3/{epoch}")
+        model.save(f"models/PPO_4/{epoch}")
 
 if __name__ == "__main__":
     # gui()

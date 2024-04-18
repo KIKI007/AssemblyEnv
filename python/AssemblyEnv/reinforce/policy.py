@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from AssemblyEnv.reinforce.playground import AssemblyPlayground
+from AssemblyEnv.reinforce.env import AssemblyPlayground
 from multiprocessing import Process, Queue
 from stable_baselines3 import PPO
 from AssemblyEnv.geometry import Assembly2D
@@ -21,13 +21,13 @@ from stable_baselines3.common.distributions import (
     make_proba_distribution,
 )
 
-class SequenceNetwork(nn.Module):
+class AssemblyNetwork(nn.Module):
     def __init__(
         self,
         feature_dim: int,
         last_layer_dim: int = 64,
     ):
-        super(SequenceNetwork, self).__init__()
+        super(AssemblyNetwork, self).__init__()
         # IMPORTANT:
         # Save output dimensions, used to create the distributions
         self.latent_dim_vf = self.latent_dim_pi = last_layer_dim
@@ -55,7 +55,8 @@ class SequenceNetwork(nn.Module):
 
     def forward_critic(self, features: th.Tensor) -> th.Tensor:
         return self.policy_net(features)
-class SequenceACPolicy(ActorCriticPolicy):
+
+class AssemblyACPolicy(ActorCriticPolicy):
     def __init__(
         self,
         observation_space: gym.spaces.Space,
@@ -67,7 +68,7 @@ class SequenceACPolicy(ActorCriticPolicy):
         **kwargs,
     ):
 
-        super(SequenceACPolicy, self).__init__(
+        super(AssemblyACPolicy, self).__init__(
             observation_space,
             action_space,
             lr_schedule,
@@ -82,7 +83,7 @@ class SequenceACPolicy(ActorCriticPolicy):
         self.ninf = -1E8
 
     def _build_mlp_extractor(self) -> None:
-        self.mlp_extractor = SequenceNetwork(self.features_dim)
+        self.mlp_extractor = AssemblyNetwork(self.features_dim)
 
     def forward(self, obs: th.Tensor, deterministic: bool = False) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
