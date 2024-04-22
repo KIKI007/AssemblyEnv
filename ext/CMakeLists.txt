@@ -15,6 +15,7 @@ endmacro()
 
 #-----------------------------------------------------------------------------
 # libccd
+option(BUILD_SHARED_LIBS "Build libccd as a shared library" OFF)
 FetchContent_Declare(
         libccd
         GIT_REPOSITORY https://github.com/danfis/libccd.git

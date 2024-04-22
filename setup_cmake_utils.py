@@ -24,7 +24,6 @@ class CMakeExtension(Extension):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
 
-
 class CMakeBuild(build_ext):
     def run(self):
         try:
@@ -49,7 +48,7 @@ class CMakeBuild(build_ext):
                     #   '-DPYTHON_LIBRARY=' + os.path.join(execdir, 'lib', ),
                     #   '-DPYTHON_INCLUDE_DIR=' + ,
                       # disable cpp test because we exclude them in MANIFEST.in
-                      '-DGUI=OFF']
+                      ]
 
         # build against the non-system (homebrew, etc.) Python install
         # https://github.com/pybind/pybind11/issues/99#issuecomment-207782425

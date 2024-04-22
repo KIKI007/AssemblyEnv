@@ -59,6 +59,4 @@ NB_MODULE(py_rigidblock, m)
     .def_static("polygon", &rigid_block::Part::create_polygon)
     .def("centroid", &rigid_block::Part::center)
     .def("volume", &rigid_block::Part::volume);
-
-
 }

@@ -9,10 +9,8 @@ if(DEFINED ENV{VCPKG_DIR} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 
 # set name of the project
-project(assemblyenv)
-
+project(AssemblyEnv)
 set(CMAKE_CXX_STANDARD 17)
-set(CXX 1)
 # data folder path
 set(ASEEMBLYENV_DATA_FOLDER
     "\"${CMAKE_CURRENT_LIST_DIR}/data\""
@@ -38,7 +36,7 @@ function(
     LINK_LIBS #
     COMPILE_DEFINITIONS #
 )
-    add_library(${LIB_NAME} SHARED ${SOURCE})
+    add_library(${LIB_NAME} STATIC ${SOURCE})
     add_library(kiki::${LIB_NAME} ALIAS ${LIB_NAME})
     add_dependencies(${LIB_NAME} ${DEPENDENCY})
     target_include_directories(${LIB_NAME} ${INCLUDE_DIRS})

@@ -26,6 +26,7 @@ exec(read('python', 'AssemblyEnv', '__version__.py'), about)
 
 requirements = read('requirements.txt').split('\n')
 #requirements = []
+
 ext_modules = [
     CMakeExtension('py_rigidblock'),
     ]
@@ -46,7 +47,7 @@ setup(
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
     classifiers=[
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.10',
     ],
     keywords=[''],
     install_requires=requirements,
