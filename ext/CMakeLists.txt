@@ -33,7 +33,6 @@ FetchContent_Declare(
 fetch(nanobind)
 add_subdirectory(${nanobind_SOURCE_DIR} nanobind)
 
-
 #-------------------------------------------------------------------------------
 # triangle
 FetchContent_Declare(
