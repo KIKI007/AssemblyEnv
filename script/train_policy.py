@@ -11,13 +11,13 @@ def train(queue):
     env.send_time_delay = 0.1
     env.render = False
     env.reset()
-    #model = PPO(RobotACPolicy, env, verbose=1, tensorboard_log="./logs", policy_kwargs=(dict(n_robot = env.n_robot(), n_part = env.n_part())))
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./logs")
+    model = PPO(RobotACPolicy, env, verbose=1, tensorboard_log="./logs", policy_kwargs=(dict(n_robot = env.n_robot(), n_part = env.n_part())))
+    #model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./logs")
     #model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./logs/")
     #model = PPO.load(f"models/PPO_2/{4}", env)
     for epoch in range(100):
         model.learn(total_timesteps=10000, tb_log_name="PPO", reset_num_timesteps= (epoch == 0))
-        model.save(f"models/PPO_1/{epoch}")
+        model.save(f"models/PPO_2/{epoch}")
 
 if __name__ == "__main__":
     # gui()
