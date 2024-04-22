@@ -58,7 +58,7 @@ class Assembly2D:
 	                   lobnd - varf[loind] <= 0,
 	                   varf[upind] - upbnd <= 0])
 		try:
-			prob.solve(solver=cp.GUROBI, verbose = False, env = self.env)
+			prob.solve(solver=cp.GUROBI, verbose = 0, env = self.env)
 		except cp.SolverError:
 			return None
 		if prob.status != 'optimal':
@@ -83,6 +83,7 @@ class Assembly2D_GUI(Assembly2D):
 				status.append(1)
 			else:
 				status.append(0)
+		print(status)
 		return status
 
 	def update_status(self, status):
@@ -95,8 +96,10 @@ class Assembly2D_GUI(Assembly2D):
 				obj.set_enabled(True)
 			elif status[part_id] == 1:
 				obj.set_enabled(True)
+				part.fixed = False
 				obj.set_color(self.part_colors[part_id])
 			else:
+				part.fixed = False
 				obj.set_enabled(False)
 			#self.update_render = True
 
