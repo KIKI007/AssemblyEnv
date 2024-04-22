@@ -20,7 +20,7 @@ def test(queue):
     env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
-    model = PPO.load(f"models/PPO_2/{4}", env)
+    model = PPO.load(f"models/PPO_5/{4}", env)
 
     # print(obs, prob0)
 
@@ -32,7 +32,8 @@ def test(queue):
 
         obs, reward, terminated, truncated, info = env.step(action)
         if terminated or truncated:
-            break
+            if reward < 1:
+                time.sleep(5)
             obs, info = env.reset()
             env.send()
 
