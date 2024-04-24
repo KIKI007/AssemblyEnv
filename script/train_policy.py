@@ -10,13 +10,13 @@ def train(queue):
     env = AssemblyPlayground(assembly)
     env.render = False
     env.reset()
-    model = PPO(AssemblyACPolicy, env)
+    model = PPO(AssemblyACPolicy, env, verbose=1, tensorboard_log="./logs/robot1")
     #model = PPO(RobotACPolicy, env, verbose=1, learning_rate=0.00003, tensorboard_log="./logs", policy_kwargs=(dict(n_robot = env.n_robot(), n_part = env.n_part())))
     #model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./logs")
     #model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./logs/")
     #model = PPO.load(f"models/PPO_norobotrestrict/{19}", env)
     for epoch in range(0, 50):
-        model.learn(total_timesteps=1000, reset_num_timesteps= (epoch == 0))
+        model.learn(total_timesteps=10000, reset_num_timesteps= (epoch == 0))
         model.save(f"models/PPO_1robotEnv/{epoch}")
 
 if __name__ == "__main__":
