@@ -5,9 +5,7 @@ from multiprocessing import Process, Queue
 from stable_baselines3 import PPO
 
 
-def train_2robot(queue):
-    parts = queue.get()
-    assembly = Assembly2D(parts)
+def train_2robot(assembly):
     env = RobotPlayground(assembly)
     env.render = False
     env.reset()
@@ -15,9 +13,7 @@ def train_2robot(queue):
     for epoch in range(0, 50):
         model.learn(total_timesteps=10000, reset_num_timesteps=(epoch == 0))
         model.save(f"models/PPO_mask/{epoch}")
-def train_1robot(queue):
-    parts = queue.get()
-    assembly = Assembly2D(parts)
+def train_1robot(assembly):
     env = AssemblyPlayground(assembly)
     env.render = False
     env.reset()
@@ -47,5 +43,5 @@ if __name__ == "__main__":
     #          [[4.0, 0.0], [5.0, 0.0], [5.0, 2.0], [4.0, 2.0]],
     #          [[0.0, 2.0], [5.0, 2.0], [5.0, 3.0], [0.0, 3.0]],
     #          [[0.0, 5.0], [5.0, 5.0], [5.0, 6.0], [0.0, 6.0]]]
-    queue.put(parts)
+    assembly = Assembly2D(parts)
     train_2robot(queue)
