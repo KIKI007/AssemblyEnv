@@ -6,7 +6,7 @@ import polyscope as ps
 import polyscope.imgui as psim
 import cvxpy as cp
 import gurobipy
-class Assembly2D:
+class AssemblyChecker:
 	def __init__(self, boundaries=None):
 		self.assembly = None
 		self.analyzer = None
@@ -70,10 +70,10 @@ class Assembly2D:
 			return None
 		return prob.value
 
-class Assembly2D_GUI(Assembly2D):
+class AssemblyGUI(AssemblyChecker):
 
 	def __init__(self, boundaries = None):
-		super(Assembly2D_GUI, self).__init__(boundaries)
+		super(AssemblyGUI, self).__init__(boundaries)
 		self.text = ""
 		self.update_render = False
 
