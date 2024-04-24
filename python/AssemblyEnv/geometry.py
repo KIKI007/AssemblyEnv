@@ -22,9 +22,14 @@ class Assembly2D:
 		return self.assembly.n_part()
 
 	def load_from_file(self, path):
-		with open(path, 'rb') as fp:
-			boundries = pickle.load(fp)
-			self.init(boundries)
+		self.assembly = Assembly()
+		self.assembly.from_file(path)
+		plane = self.assembly.ground()
+		self.assembly.set_boundary(plane, "add")
+		self.create_analyzer()
+		#with open(path, 'rb') as fp:
+			#boundries = pickle.load(fp)
+			#elf.init(boundries)
 
 	def init(self, boundaries):
 		self.assembly = Assembly()
@@ -39,7 +44,7 @@ class Assembly2D:
 	def create_analyzer(self):
 		if self.assembly != None:
 			partList = [x for x in range(self.assembly.n_part())]
-			self.contacts = self.assembly.contacts(partList, .9)
+			self.contacts = self.assembly.contacts(partList, 1.0)
 			self.analyzer = self.assembly.analyzer(self.contacts, False)
 			self.analyzer.friction = 0.5
 			self.analyzer.compute()

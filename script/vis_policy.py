@@ -20,7 +20,7 @@ def test(queue):
     env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
-    model = PPO.load(f"models/PPO_5/{4}", env)
+    model = PPO.load(f"models/PPO_nonmask/{64}", env)
 
     # print(obs, prob0)
 

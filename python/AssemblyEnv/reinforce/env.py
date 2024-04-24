@@ -15,44 +15,44 @@ class AssemblyPlayground(gym.Env):
 		# last part in the assembly is always the ground part
 		self.assembly = assembly
 
-		self.observation_space = MultiBinary(self.n_state())
-		self.action_space = Discrete(self.n_state())
-		self._state = np.zeros(self.n_state(), dtype=int)
+		self.observation_space = MultiBinary(self.n_part())
+		self.action_space = Discrete(self.n_part())
+		self._state = np.zeros(self.n_part(), dtype=int)
 
 		self.send_time_delay = 1
 		self.render = False
 
-	def terminate_status(self):
-		status = np.ones(self.n_state())
-		status = np.append(status, [2])
-		return status
+	def terminate_label(self):
+		label = np.ones(self.n_part())
+		label = np.append(label, [2])
+		return label
 
-	def part_status(self):
-		status = np.copy(self._state)
-		status = np.append(status, [2])
-		return status
+	def current_label(self):
+		label = np.copy(self._state)
+		label = np.append(label, [2])
+		return label
 
 	def _get_obs(self):
 		return self._state
 
 	def _get_info(self):
 		return {
-			"finished": (self.part_status() == self.terminate_status()).all()
+			"finished": (self.current_label() == self.terminate_label()).all()
 		}
 
-	def n_state(self):
+	def n_part(self):
 		return self.assembly.n_part() - 1
 
-	def n_installed(self):
+	def n_install(self):
 		return np.sum(self._state)
 
 	def reset_random(self, seed=None, options=None):
 		super().reset(seed=seed)
 
 		while True:
-			self._state = np.random.randint(2, size = self.n_state())
-			if (self.n_installed() < self.n_state()
-					and self.assembly.check_stability(self.part_status()) != None):
+			self._state = np.random.randint(2, size = self.n_part())
+			if (self.n_install() < self.n_part()
+					and self.assembly.check_stability(self.current_label()) != None):
 				break
 
 		observation = self._get_obs()
@@ -70,7 +70,6 @@ class AssemblyPlayground(gym.Env):
 		return observation, info
 
 	def step(self, action):
-
 		terminated = False
 		reward = 0
 
@@ -80,10 +79,10 @@ class AssemblyPlayground(gym.Env):
 			reward = -1
 		else:
 			self._state[action] = 1
-			if self.assembly.check_stability(self.part_status()) == None:
+			if self.assembly.check_stability(self.current_label()) == None:
 				terminated = True
 				reward = -1
-			elif (self.terminate_status() == self.part_status()).all():
+			elif (self.terminate_label() == self.current_label()).all():
 				terminated = True
 				reward = 1
 
@@ -96,7 +95,7 @@ class AssemblyPlayground(gym.Env):
 
 	def send(self):
 		if self.render:
-			data = {"state": self.part_status()}
+			data = {"state": self.current_label()}
 			topic = Topic("/rl/sequence/", Message)
 			tx = MqttTransport(host="localhost")
 			publisher = Publisher(topic, transport=tx)
