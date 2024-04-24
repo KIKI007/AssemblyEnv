@@ -13,14 +13,19 @@ from stable_baselines3 import PPO, DQN
 import time
 import itertools
 import pickle
+from AssemblyEnv import DATA_DIR
 
 def test(queue):
     parts = queue.get()
-    assembly = AssemblyChecker(parts)
-    env = RobotPlayground(assembly)
+    #assembly = AssemblyChecker(parts)
+
+    assembly = AssemblyChecker()
+    assembly.load_from_file(DATA_DIR + "/block/dome_partial.obj")
+    env = AssemblyPlayground(assembly)
+    #env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
-    model = PPO.load(f"models/PPO_mask/{10}", env)
+    model = PPO.load(f"models/dome_partial/PPO/{5}", env)
 
     obs, info = env.reset()
     env.send()
@@ -42,7 +47,9 @@ def update_viewer(msg):
 def gui(queue):
     global viewer
     parts = queue.get()
-    viewer = AssemblyGUI(parts)
+    viewer = AssemblyGUI()
+    viewer.load_from_file(DATA_DIR + "/block/dome_partial.obj")
+    #viewer = AssemblyGUI(parts)
 
     ps.init()
     ps.set_navigation_style("turntable")

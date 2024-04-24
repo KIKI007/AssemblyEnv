@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse
 from AssemblyEnv.py_rigidblock import Assembly, Part
 import AssemblyEnv.py_rigidblock as pyrb
 import pickle
@@ -8,15 +9,14 @@ import cvxpy as cp
 import gurobipy as gp
 from gurobipy import GRB
 from scipy.sparse import csc_matrix
+import mosek.fusion as mo
+import mosek
+import sys
 class AssemblyChecker:
 	def __init__(self, boundaries=None):
 		self.assembly = None
 		self.analyzer = None
 		self.contacts = None
-		self.solver = gp.Model()
-		self.solver.setParam('LogFile', "")
-		self.solver.setParam('LogToConsole', 0)
-		self.solver.setParam('OutputFlag', 0)
 		self.part_colors = []
 
 		if boundaries != None:
@@ -55,17 +55,56 @@ class AssemblyChecker:
 			self.K = csc_matrix(self.analyzer.matEq)
 			self.g = self.analyzer.vecG
 			self.Kf = csc_matrix(self.analyzer.matFr)
+			self.create_mosek_solver()
 
-			self.varf = self.solver.addMVar( shape=self.analyzer.n_var(), vtype = GRB.CONTINUOUS, name = "varf")
-			self.solver.addConstr(self.K @ self.varf + self.g == 0)
-			self.solver.addConstr(self.Kf @ self.varf <= 0)
-			self.solver.setObjective(0, GRB.MINIMIZE)
+	def create_mosek_solver(self):
+		self.solver = mo.Model("lo")
+		K_coo  = scipy.sparse.coo_matrix(self.K)
+		Kf_coo = scipy.sparse.coo_matrix(self.Kf)
+		K = mo.Matrix.sparse(K_coo.shape[0], K_coo.shape[1], K_coo.row, K_coo.col, K_coo.data)
+		Kf = mo.Matrix.sparse(Kf_coo.shape[0], Kf_coo.shape[1], Kf_coo.row, Kf_coo.col, Kf_coo.data)
+
+		self.varf = self.solver.variable("varf", self.analyzer.n_var())
+		self.solver.constraint("eq", mo.Expr.add(mo.Expr.mul(K, self.varf), self.g), mo.Domain.equalsTo(0.0))
+		self.solver.constraint("fr", mo.Expr.mul(Kf, self.varf), mo.Domain.lessThan(0.0))
+		self.solver.objective("obj", mo.ObjectiveSense.Minimize, 0)
+
+		zero = np.zeros(self.analyzer.n_var())
+		self.lb_con = self.solver.constraint('lb', self.varf, mo.Domain.greaterThan(0))
+		self.ub_con = self.solver.constraint('ub', self.varf, mo.Domain.lessThan(0))
+
+		self.solver.setSolverParam('optimizer', 'primalSimplex')
+		#self.solver.setLogHandler(sys.stdout)
+
+	def create_gurobi_solver(self):
+		self.solver = gp.Model()
+		self.solver.setParam('LogFile', "")
+		self.solver.setParam('LogToConsole', 0)
+		self.solver.setParam('OutputFlag', 0)
+		self.varf = self.solver.addMVar(shape=self.analyzer.n_var(), vtype=GRB.CONTINUOUS, name="varf")
+		self.solver.addConstr(self.K @ self.varf + self.g == 0)
+		self.solver.addConstr(self.Kf @ self.varf <= 0)
+		self.solver.setObjective(0, GRB.MINIMIZE)
 
 	def reset(self):
-		self.solver.reset()
+		pass
 
-	def close(self):
-		self.reset()
+	def check_stability(self, status):
+		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
+		[ubind, ubval] = self.analyzer.upbnd(np.array(status))
+		lb = np.ones(self.analyzer.n_var(), dtype=float) * -1E10
+		lb[lbind] = lbval
+
+		ub = np.ones(self.analyzer.n_var(), dtype=float) * 1E10
+		ub[ubind] = ubval
+
+		self.lb_con.update(-lb)
+		self.ub_con.update(-ub)
+		self.solver.solve()
+		if self.solver.getPrimalSolutionStatus() == mo.SolutionStatus.Optimal:
+			return 0
+		else:
+			return None
 
 	def check_stability_gurobi(self, status):
 		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
@@ -86,7 +125,7 @@ class AssemblyChecker:
 		else:
 			return None
 
-	def check_stability(self, status):
+	def check_stability_cvxpy(self, status):
 		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
 		[upind, upbnd] = self.analyzer.upbnd(np.array(status))
 		varf = cp.Variable(self.analyzer.n_var())
@@ -97,7 +136,7 @@ class AssemblyChecker:
 	                   lobnd - varf[loind] <= 0,
 	                   varf[upind] - upbnd <= 0])
 		try:
-			prob.solve(verbose = 0, solver = "MOSEK")
+			prob.solve(verbose = 0, solver = "GUROBI")
 		except cp.SolverError:
 			return None
 		if prob.status != 'optimal':
