@@ -82,7 +82,7 @@ class AssemblyPlayground(gym.Env):
 			if self.assembly.check_stability(self.current_label()) == None:
 				terminated = True
 				reward = -1
-			elif (self.terminate_label() == self.current_label()).all():
+			if (self.terminate_label() == self.current_label()).all():
 				terminated = True
 				reward = 1
 

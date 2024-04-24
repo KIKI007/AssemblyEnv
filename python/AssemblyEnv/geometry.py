@@ -63,7 +63,7 @@ class Assembly2D:
 	                   lobnd - varf[loind] <= 0,
 	                   varf[upind] - upbnd <= 0])
 		try:
-			prob.solve(solver=cp.GUROBI, verbose = 0, env = self.env)
+			prob.solve(verbose = 0)
 		except cp.SolverError:
 			return None
 		if prob.status != 'optimal':
