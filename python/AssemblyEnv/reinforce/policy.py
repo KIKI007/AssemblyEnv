@@ -224,9 +224,9 @@ class RobotACPolicy(ActorCriticPolicy):
         install_state = obs[:,  :self.n_part]
         fixed_state = obs[:, self.n_part:]
 
-        #non_install_action = th.sum(fixed_state, axis = -1) >= self.n_robot
+        non_install_action = th.sum(fixed_state, axis = -1) >= self.n_robot
         mean_actions[:, : self.n_part] = (install_state) * self.ninf + mean_actions[:, : self.n_part]
-        #mean_actions[:, : self.n_part] += th.einsum("i, j -> ij", non_install_action, self.ninf * th.ones(self.n_part, dtype=mean_actions.dtype, device = mean_actions.device))
+        mean_actions[:, : self.n_part] += th.einsum("i, j -> ij", non_install_action, self.ninf * th.ones(self.n_part, dtype=mean_actions.dtype, device = mean_actions.device))
         mean_actions[:, self.n_part:] = (1 - fixed_state) * self.ninf + mean_actions[:, self.n_part:]
         return self.action_dist.proba_distribution(action_logits=mean_actions)
     def get_distribution(self, obs: th.Tensor) -> Distribution:

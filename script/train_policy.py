@@ -4,17 +4,24 @@ from AssemblyEnv.reinforce.env import AssemblyPlayground, RobotPlayground
 from multiprocessing import Process, Queue
 from stable_baselines3 import PPO
 
-def train(queue):
+
+def train_2robot(queue):
+    parts = queue.get()
+    assembly = Assembly2D(parts)
+    env = RobotPlayground(assembly)
+    env.render = False
+    env.reset()
+    model = PPO(RobotACPolicy, env, verbose=1, learning_rate=0.00003, tensorboard_log="./logs/robot2", policy_kwargs=(dict(n_robot = env.n_robot(), n_part = env.n_part())))
+    for epoch in range(0, 50):
+        model.learn(total_timesteps=10000, reset_num_timesteps=(epoch == 0))
+        model.save(f"models/PPO_mask/{epoch}")
+def train_1robot(queue):
     parts = queue.get()
     assembly = Assembly2D(parts)
     env = AssemblyPlayground(assembly)
     env.render = False
     env.reset()
     model = PPO(AssemblyACPolicy, env, verbose=1, tensorboard_log="./logs/robot1")
-    #model = PPO(RobotACPolicy, env, verbose=1, learning_rate=0.00003, tensorboard_log="./logs", policy_kwargs=(dict(n_robot = env.n_robot(), n_part = env.n_part())))
-    #model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./logs")
-    #model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./logs/")
-    #model = PPO.load(f"models/PPO_norobotrestrict/{19}", env)
     for epoch in range(0, 50):
         model.learn(total_timesteps=10000, reset_num_timesteps= (epoch == 0))
         model.save(f"models/PPO_1robotEnv/{epoch}")
@@ -41,4 +48,4 @@ if __name__ == "__main__":
              [[0.0, 2.0], [5.0, 2.0], [5.0, 3.0], [0.0, 3.0]],
              [[0.0, 5.0], [5.0, 5.0], [5.0, 6.0], [0.0, 6.0]]]
     queue.put(parts)
-    train(queue)
+    train_2robot(queue)
