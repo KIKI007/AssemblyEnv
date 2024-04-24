@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import polyscope as ps
-from AssemblyEnv.geometry import Assembly2D, Assembly2D_GUI
+from AssemblyEnv.geometry import AssemblyChecker, AssemblyGUI
 from AssemblyEnv.reinforce.env import RobotPlayground, AssemblyPlayground
 from multiprocessing import Process, Queue
 from compas_eve import Message
@@ -16,7 +16,7 @@ import pickle
 
 def test(queue):
     parts = queue.get()
-    assembly = Assembly2D(parts)
+    assembly = AssemblyChecker(parts)
     env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
@@ -42,7 +42,7 @@ def update_viewer(msg):
 def gui(queue):
     global viewer
     parts = queue.get()
-    viewer = Assembly2D_GUI(parts)
+    viewer = AssemblyGUI(parts)
 
     ps.init()
     ps.set_navigation_style("turntable")

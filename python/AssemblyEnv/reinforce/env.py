@@ -64,6 +64,7 @@ class AssemblyPlayground(gym.Env):
 		# We need the following line to seed self.np_random
 		super().reset(seed=seed)
 		self._state = np.zeros(self.assembly.n_part() - 1, dtype=int)
+		self.assembly.reset()
 
 		observation = self._get_obs()
 		info = self._get_info()
@@ -191,6 +192,7 @@ class RobotPlayground(gym.Env):
 	def reset(self, seed=None, options=None):
 		# We need the following line to seed self.np_random
 		super().reset(seed=seed)
+		self.assembly.reset()
 		self._state = np.zeros(self.n_state(), dtype=int)
 		observation = self._get_obs()
 		info = self._get_info()

@@ -5,14 +5,18 @@ import pickle
 import polyscope as ps
 import polyscope.imgui as psim
 import cvxpy as cp
-import gurobipy
+import gurobipy as gp
+from gurobipy import GRB
+from scipy.sparse import csc_matrix
 class AssemblyChecker:
 	def __init__(self, boundaries=None):
 		self.assembly = None
 		self.analyzer = None
 		self.contacts = None
-		self.env = gurobipy.Env()
-		self.env.setParam('OutputFlag', 0)
+		self.solver = gp.Model()
+		self.solver.setParam('LogFile', "")
+		self.solver.setParam('LogToConsole', 0)
+		self.solver.setParam('OutputFlag', 0)
 		self.part_colors = []
 
 		if boundaries != None:
@@ -48,22 +52,52 @@ class AssemblyChecker:
 			self.analyzer = self.assembly.analyzer(self.contacts, False)
 			self.analyzer.friction = 0.5
 			self.analyzer.compute()
-			self.K = self.analyzer.matEq
+			self.K = csc_matrix(self.analyzer.matEq)
 			self.g = self.analyzer.vecG
-			self.Kf = self.analyzer.matFr
+			self.Kf = csc_matrix(self.analyzer.matFr)
+
+			self.varf = self.solver.addMVar( shape=self.analyzer.n_var(), vtype = GRB.CONTINUOUS, name = "varf")
+			self.solver.addConstr(self.K @ self.varf + self.g == 0)
+			self.solver.addConstr(self.Kf @ self.varf <= 0)
+			self.solver.setObjective(0, GRB.MINIMIZE)
+
+	def reset(self):
+		self.solver.reset()
+
+	def close(self):
+		self.reset()
+
+	def check_stability_gurobi(self, status):
+		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
+		[upind, upbnd] = self.analyzer.upbnd(np.array(status))
+		for i in range(self.analyzer.n_var()):
+			self.varf[i].UB = +GRB.INFINITY
+			self.varf[i].LB = -GRB.INFINITY
+
+		for i in range(len(loind)):
+			self.varf[loind[i]].LB = lobnd[i]
+
+		for i in range(len(upind)):
+			self.varf[upind[i]].UB = upbnd[i]
+
+		self.solver.optimize()
+		if self.solver.status == GRB.OPTIMAL:
+			return 0
+		else:
+			return None
 
 	def check_stability(self, status):
 		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
 		[upind, upbnd] = self.analyzer.upbnd(np.array(status))
 		varf = cp.Variable(self.analyzer.n_var())
-		P = self.analyzer.obj_ceoff()
-		prob = cp.Problem(cp.Minimize((1 / 2) * cp.quad_form(varf, P)),
+		#P = self.analyzer.obj_ceoff()
+		prob = cp.Problem(cp.Minimize(0), # cp.Minimize((1 / 2) * cp.quad_form(varf, P)),
 	                  [self.K @ varf + self.g == 0,
 	                   self.Kf @ varf <= 0,
 	                   lobnd - varf[loind] <= 0,
 	                   varf[upind] - upbnd <= 0])
 		try:
-			prob.solve(verbose = 0)
+			prob.solve(verbose = 0, solver = "MOSEK")
 		except cp.SolverError:
 			return None
 		if prob.status != 'optimal':

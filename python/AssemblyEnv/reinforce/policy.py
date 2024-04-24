@@ -3,7 +3,7 @@ import numpy as np
 from AssemblyEnv.reinforce.env import AssemblyPlayground
 from multiprocessing import Process, Queue
 from stable_baselines3 import PPO
-from AssemblyEnv.geometry import Assembly2D
+from AssemblyEnv.geometry import AssemblyChecker
 import time
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 import torch as th
