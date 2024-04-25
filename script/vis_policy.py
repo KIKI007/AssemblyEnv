@@ -25,7 +25,7 @@ def test(queue):
     #env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
-    model = PPO.load(f"models/dome_partial/PPO/{5}", env)
+    model = PPO.load(f"models/dome_partial/PPO/{8}", env)
 
     obs, info = env.reset()
     env.send()
