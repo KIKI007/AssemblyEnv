@@ -25,9 +25,9 @@ def test(queue):
     #env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
-    model = PPO.load(f"models/dome_partial/PPO/{8}", env)
+    model = PPO.load(f"models/dome_partial/PPO3/{0}", env)
 
-    obs, info = env.reset()
+    obs, info = env.reset_random()
     env.send()
     while True:
         action, _state = model.predict(obs, deterministic=False)
@@ -36,7 +36,7 @@ def test(queue):
         if terminated or truncated:
             if reward < 1:
                 time.sleep(5)
-            obs, info = env.reset()
+            obs, info = env.reset_random()
             env.send()
 
 

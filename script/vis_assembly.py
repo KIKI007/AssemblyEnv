@@ -30,5 +30,5 @@ if __name__ == "__main__":
     #          [[0.0, 2.0], [5.0, 2.0], [5.0, 3.0], [0.0, 3.0]],
     #          [[0.0, 5.0], [5.0, 5.0], [5.0, 6.0], [0.0, 6.0]]]
     viewer = AssemblyGUI()
-    viewer.load_from_file(DATA_DIR + "/block/dome_partial.obj")
+    viewer.load_from_file(DATA_DIR + "/block/dome.obj")
     gui(viewer)

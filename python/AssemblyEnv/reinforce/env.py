@@ -71,6 +71,7 @@ class AssemblyPlayground(gym.Env):
 		return observation, info
 
 	def step(self, action):
+
 		terminated = False
 		reward = 0
 
@@ -83,6 +84,7 @@ class AssemblyPlayground(gym.Env):
 			if self.assembly.check_stability(self.current_label()) == None:
 				terminated = True
 				reward = -1
+
 			if (self.terminate_label() == self.current_label()).all():
 				terminated = True
 				reward = 1

@@ -13,11 +13,13 @@ import mosek.fusion as mo
 import mosek
 import sys
 class AssemblyChecker:
-	def __init__(self, boundaries=None):
+	def __init__(self, boundaries=None, rank = 0):
 		self.assembly = None
 		self.analyzer = None
 		self.contacts = None
 		self.part_colors = []
+		self.inf = 1E5
+		self.rank = rank
 
 		if boundaries != None:
 			self.init(boundaries)
@@ -58,7 +60,7 @@ class AssemblyChecker:
 			self.create_mosek_solver()
 
 	def create_mosek_solver(self):
-		self.solver = mo.Model("lo")
+		self.solver = mo.Model()
 		K_coo  = scipy.sparse.coo_matrix(self.K)
 		Kf_coo = scipy.sparse.coo_matrix(self.Kf)
 		K = mo.Matrix.sparse(K_coo.shape[0], K_coo.shape[1], K_coo.row, K_coo.col, K_coo.data)
@@ -72,8 +74,6 @@ class AssemblyChecker:
 		zero = np.zeros(self.analyzer.n_var())
 		self.lb_con = self.solver.constraint('lb', self.varf, mo.Domain.greaterThan(0))
 		self.ub_con = self.solver.constraint('ub', self.varf, mo.Domain.lessThan(0))
-
-		self.solver.setSolverParam('optimizer', 'primalSimplex')
 		#self.solver.setLogHandler(sys.stdout)
 
 	def create_gurobi_solver(self):
@@ -92,10 +92,10 @@ class AssemblyChecker:
 	def check_stability(self, status):
 		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
 		[ubind, ubval] = self.analyzer.upbnd(np.array(status))
-		lb = np.ones(self.analyzer.n_var(), dtype=float) * -1E10
+		lb = np.ones(self.analyzer.n_var(), dtype=float) * -self.inf
 		lb[lbind] = lbval
 
-		ub = np.ones(self.analyzer.n_var(), dtype=float) * 1E10
+		ub = np.ones(self.analyzer.n_var(), dtype=float) * self.inf
 		ub[ubind] = ubval
 
 		self.lb_con.update(-lb)
@@ -129,14 +129,13 @@ class AssemblyChecker:
 		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
 		[upind, upbnd] = self.analyzer.upbnd(np.array(status))
 		varf = cp.Variable(self.analyzer.n_var())
-		#P = self.analyzer.obj_ceoff()
 		prob = cp.Problem(cp.Minimize(0), # cp.Minimize((1 / 2) * cp.quad_form(varf, P)),
 	                  [self.K @ varf + self.g == 0,
 	                   self.Kf @ varf <= 0,
 	                   lobnd - varf[loind] <= 0,
 	                   varf[upind] - upbnd <= 0])
 		try:
-			prob.solve(verbose = 0, solver = "GUROBI")
+			prob.solve(verbose = 1, solver = "SCIPY")
 		except cp.SolverError:
 			return None
 		if prob.status != 'optimal':

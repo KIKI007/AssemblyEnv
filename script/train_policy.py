@@ -1,10 +1,14 @@
 from AssemblyEnv.reinforce.policy import AssemblyACPolicy, RobotACPolicy
 from AssemblyEnv.geometry import AssemblyChecker
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from AssemblyEnv.reinforce.env import AssemblyPlayground, RobotPlayground
 from multiprocessing import Process, Queue
 from stable_baselines3 import PPO
 from AssemblyEnv import DATA_DIR
-
+from stable_baselines3.common.utils import set_random_seed
+from stable_baselines3.common.env_util import make_vec_env
+from typing import Callable
+import gymnasium as gym
 def train_2robot(assembly):
     env = RobotPlayground(assembly)
     env.render = False
@@ -13,14 +17,35 @@ def train_2robot(assembly):
     for epoch in range(0, 50):
         model.learn(total_timesteps=10000, reset_num_timesteps=(epoch == 0))
         model.save(f"models/PPO_mask/{epoch}")
+
+def make_env() -> Callable:
+    """
+    Utility function for multiprocessed env.
+
+    :param env_id: the environment ID
+    :param num_env: the number of environments you wish to have in subprocesses
+    :param seed: the inital seed for RNG
+    :param rank: index of the subprocess
+    """
+    def _init():
+        assembly = AssemblyChecker()
+        filename = DATA_DIR + "/block/dome_partial.obj"
+        assembly.load_from_file(filename)
+        env = AssemblyPlayground(assembly)
+        env.render = False
+        env.reset()
+        return env
+    return _init
+
 def train_1robot(assembly, name = ""):
-    env = AssemblyPlayground(assembly)
-    env.render = False
-    env.reset()
-    model = PPO(AssemblyACPolicy, env, verbose=1, tensorboard_log=f"./logs/{name}")
-    for epoch in range(0, 50):
-        model.learn(total_timesteps=10000, reset_num_timesteps= (epoch == 0))
-        model.save(f"models/{name}/PPO/{epoch}")
+    num_cpu = 16
+    vec_env = make_vec_env(make_env(), n_envs = num_cpu, vec_env_cls=SubprocVecEnv)
+    model = PPO.load(f"models/{name}/PPO/{49}", vec_env)
+    #model = PPO(AssemblyACPolicy, vec_env, verbose=1, tensorboard_log=f"./logs/{name}")
+
+    for epoch in range(0, 1000):
+        model.learn(total_timesteps=100000, reset_num_timesteps= (epoch == 0))
+        model.save(f"models/{name}/PPO3/{epoch}")
 
 if __name__ == "__main__":
     # gui()
