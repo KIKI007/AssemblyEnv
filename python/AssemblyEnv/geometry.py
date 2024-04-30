@@ -8,10 +8,19 @@ import polyscope.imgui as psim
 import cvxpy as cp
 import gurobipy as gp
 from gurobipy import GRB
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, coo_matrix
 import mosek.fusion as mo
+from scipy.sparse import vstack
+import scipy as sp
 import mosek
 import sys
+import torch
+from sksparse.cholmod import cholesky
+# Reset since we are using a different mode.
+from time import perf_counter
+
+
+
 class AssemblyChecker:
 	def __init__(self, boundaries=None, rank = 0):
 		self.assembly = None
@@ -33,9 +42,6 @@ class AssemblyChecker:
 		plane = self.assembly.ground()
 		self.assembly.set_boundary(plane, "add")
 		self.create_analyzer()
-		#with open(path, 'rb') as fp:
-			#boundries = pickle.load(fp)
-			#elf.init(boundries)
 
 	def init(self, boundaries):
 		self.assembly = Assembly()
@@ -57,26 +63,115 @@ class AssemblyChecker:
 			self.K = csc_matrix(self.analyzer.matEq)
 			self.g = self.analyzer.vecG
 			self.Kf = csc_matrix(self.analyzer.matFr)
-			self.create_mosek_solver()
+			self.create_solver()
+	def create_solver(self):
+		pass
 
-	def create_mosek_solver(self):
-		self.solver = mo.Model()
-		K_coo  = scipy.sparse.coo_matrix(self.K)
-		Kf_coo = scipy.sparse.coo_matrix(self.Kf)
-		K = mo.Matrix.sparse(K_coo.shape[0], K_coo.shape[1], K_coo.row, K_coo.col, K_coo.data)
-		Kf = mo.Matrix.sparse(Kf_coo.shape[0], Kf_coo.shape[1], Kf_coo.row, Kf_coo.col, Kf_coo.data)
+	def reset(self):
+		pass
 
-		self.varf = self.solver.variable("varf", self.analyzer.n_var())
-		self.solver.constraint("eq", mo.Expr.add(mo.Expr.mul(K, self.varf), self.g), mo.Domain.equalsTo(0.0))
-		self.solver.constraint("fr", mo.Expr.mul(Kf, self.varf), mo.Domain.lessThan(0.0))
-		self.solver.objective("obj", mo.ObjectiveSense.Minimize, 0)
+	def check_stability(self, status):
+		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
+		[upind, upbnd] = self.analyzer.upbnd(np.array(status))
+		varf = cp.Variable(self.analyzer.n_var())
+		prob = cp.Problem(cp.Minimize(0), # cp.Minimize((1 / 2) * cp.quad_form(varf, P)),
+	                  [self.K @ varf + self.g == 0,
+	                   self.Kf @ varf <= 0,
+	                   lobnd - varf[loind] <= 0,
+	                   varf[upind] - upbnd <= 0])
+		try:
+			prob.solve(verbose = 1, solver = "SCIPY")
+		except cp.SolverError:
+			return None
+		if prob.status != 'optimal':
+			return None
+		return prob.value
 
-		zero = np.zeros(self.analyzer.n_var())
-		self.lb_con = self.solver.constraint('lb', self.varf, mo.Domain.greaterThan(0))
-		self.ub_con = self.solver.constraint('ub', self.varf, mo.Domain.lessThan(0))
-		#self.solver.setLogHandler(sys.stdout)
+class AssemblyCheckerADMM(AssemblyChecker):
 
-	def create_gurobi_solver(self):
+	def __init__(self, boundaries):
+		super(AssemblyCheckerADMM, self).__init__(boundaries)
+
+	@torch.compile
+	def admm_func(self, xk, yk, zk, A, AT, inv, sigma, rho, alpha, lb, ub):
+		with torch.no_grad():
+			rhs = sigma * xk + AT @ (rho * zk - yk)
+			xt = inv @ rhs
+			zt = A @ xt
+			x = (xt * alpha + xk * (1 - alpha))
+			z = (torch.clip(alpha * zt + (1 - alpha) * zk + yk / rho, lb, ub))
+			y = (yk + rho * (alpha * zt + (1 - alpha) * zk - z))
+		return [x, y, z]
+
+	def tocuda(self, csc):
+		coo = coo_matrix(csc)
+		values = coo.data
+		indices = np.vstack((coo.row, coo.col))
+		i = torch.LongTensor(indices)
+		v = torch.FloatTensor(values)
+		shape = coo.shape
+		matrix = torch.sparse_coo_tensor(i, v, torch.Size(shape)).to('cuda')
+		return matrix.to_dense()
+
+	def create_solver(self):
+		self.sigma = 1E-6
+		self.rho = 0.1
+		self.alpha = 1.6
+		I = sp.sparse.identity(self.analyzer.n_var())
+		self.A = vstack([self.K, self.Kf, I])
+		self.lhs = csc_matrix(self.sigma * sp.sparse.identity(self.A.shape[1]) +(self.A.transpose() @ self.A) * self.rho)
+		self.lhs_factor = cholesky(self.lhs)
+		inv = self.lhs_factor.inv()
+		self.inv = torch.tensor(inv.todense(), device="cuda")
+		self.AT = torch.tensor(self.A.transpose().todense(), device="cuda")
+		self.A = torch.tensor(self.A.todense(), device="cuda")
+
+	def check_stability(self, status):
+		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
+		[ubind, ubval] = self.analyzer.upbnd(np.array(status))
+
+		lb_f = np.ones(self.analyzer.n_var(), dtype=float) * -self.inf
+		lb_f[lbind] = lbval
+
+		ub_f = np.ones(self.analyzer.n_var(), dtype=float) * self.inf
+		ub_f[ubind] = ubval
+
+		lb = np.hstack([-self.g, np.ones(self.Kf.shape[0]) * -self.inf, lb_f])
+		ub = np.hstack([-self.g, np.zeros(self.Kf.shape[0]), ub_f])
+
+		lb = torch.tensor(lb, device='cuda', dtype=torch.float)
+		ub = torch.tensor(ub, device='cuda', dtype=torch.float)
+
+		xk = torch.zeros(self.A.shape[1], device='cuda', dtype=torch.float)
+		yk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float)
+		zk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float)
+
+		start = perf_counter()
+		for k in range(5000):
+			[xk, yk, zk] = self.admm_func(xk, yk, zk, self.A, self.AT, self.inv, self.sigma, self.rho, self.alpha, lb, ub)
+			#, r_dual: {torch.linalg.norm(self.AT @ y)}")
+
+		torch.cuda.synchronize()
+		end = perf_counter()
+		print(f"time {(end - start)}")
+
+		x = xk.clone()
+		z = zk.clone()
+		# print(f"eq {np.linalg.norm(self.K @ x + self.g)}")
+		# print(f"fr {np.max(self.Kf @ x)}")
+		# print(f"bound {np.linalg.norm(np.clip(x, lb_f, ub_f) - x)}")
+		r_prim = torch.linalg.norm(self.A @ x - z)
+		if r_prim < 1E-4:
+			return r_prim
+		else:
+			return None
+
+class AssemblyCheckerGurobi(AssemblyChecker):
+
+	def __init__(self, boundaries):
+		super(AssemblyCheckerGurobi, self).__init__(boundaries)
+
+	def create_solver(self):
 		self.solver = gp.Model()
 		self.solver.setParam('LogFile', "")
 		self.solver.setParam('LogToConsole', 0)
@@ -86,27 +181,7 @@ class AssemblyChecker:
 		self.solver.addConstr(self.Kf @ self.varf <= 0)
 		self.solver.setObjective(0, GRB.MINIMIZE)
 
-	def reset(self):
-		pass
-
 	def check_stability(self, status):
-		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
-		[ubind, ubval] = self.analyzer.upbnd(np.array(status))
-		lb = np.ones(self.analyzer.n_var(), dtype=float) * -self.inf
-		lb[lbind] = lbval
-
-		ub = np.ones(self.analyzer.n_var(), dtype=float) * self.inf
-		ub[ubind] = ubval
-
-		self.lb_con.update(-lb)
-		self.ub_con.update(-ub)
-		self.solver.solve()
-		if self.solver.getPrimalSolutionStatus() == mo.SolutionStatus.Optimal:
-			return 0
-		else:
-			return None
-
-	def check_stability_gurobi(self, status):
 		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
 		[upind, upbnd] = self.analyzer.upbnd(np.array(status))
 		for i in range(self.analyzer.n_var()):
@@ -125,24 +200,46 @@ class AssemblyChecker:
 		else:
 			return None
 
-	def check_stability_cvxpy(self, status):
-		[loind, lobnd] = self.analyzer.lobnd(np.array(status))
-		[upind, upbnd] = self.analyzer.upbnd(np.array(status))
-		varf = cp.Variable(self.analyzer.n_var())
-		prob = cp.Problem(cp.Minimize(0), # cp.Minimize((1 / 2) * cp.quad_form(varf, P)),
-	                  [self.K @ varf + self.g == 0,
-	                   self.Kf @ varf <= 0,
-	                   lobnd - varf[loind] <= 0,
-	                   varf[upind] - upbnd <= 0])
-		try:
-			prob.solve(verbose = 1, solver = "SCIPY")
-		except cp.SolverError:
-			return None
-		if prob.status != 'optimal':
-			return None
-		return prob.value
+class AssemblyCheckerMosek(AssemblyChecker):
 
-class AssemblyGUI(AssemblyChecker):
+	def __init__(self, boundaries):
+		super(AssemblyCheckerMosek, self).__init__(boundaries)
+
+	def create_solver(self):
+
+		self.solver = mo.Model()
+		K_coo = scipy.sparse.coo_matrix(self.K)
+		Kf_coo = scipy.sparse.coo_matrix(self.Kf)
+		K = mo.Matrix.sparse(K_coo.shape[0], K_coo.shape[1], K_coo.row, K_coo.col, K_coo.data)
+		Kf = mo.Matrix.sparse(Kf_coo.shape[0], Kf_coo.shape[1], Kf_coo.row, Kf_coo.col, Kf_coo.data)
+
+		self.varf = self.solver.variable("varf", self.analyzer.n_var())
+		self.solver.constraint("eq", mo.Expr.add(mo.Expr.mul(K, self.varf), self.g), mo.Domain.equalsTo(0.0))
+		self.solver.constraint("fr", mo.Expr.mul(Kf, self.varf), mo.Domain.lessThan(0.0))
+		self.solver.objective("obj", mo.ObjectiveSense.Minimize, 0)
+
+		zero = np.zeros(self.analyzer.n_var())
+		self.lb_con = self.solver.constraint('lb', self.varf, mo.Domain.greaterThan(0))
+		self.ub_con = self.solver.constraint('ub', self.varf, mo.Domain.lessThan(0))
+
+	def check_stability(self, status):
+		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
+		[ubind, ubval] = self.analyzer.upbnd(np.array(status))
+		lb = np.ones(self.analyzer.n_var(), dtype=float) * -self.inf
+		lb[lbind] = lbval
+
+		ub = np.ones(self.analyzer.n_var(), dtype=float) * self.inf
+		ub[ubind] = ubval
+
+		self.lb_con.update(-lb)
+		self.ub_con.update(-ub)
+		self.solver.solve()
+		if self.solver.getPrimalSolutionStatus() == mo.SolutionStatus.Optimal:
+			return 0
+		else:
+			return None
+
+class AssemblyGUI(AssemblyCheckerADMM):
 
 	def __init__(self, boundaries = None):
 		super(AssemblyGUI, self).__init__(boundaries)
@@ -186,7 +283,6 @@ class AssemblyGUI(AssemblyChecker):
 			self.update_render = False
 
 		if psim.Button("Check Stability"):
-
 			prob_result = self.check_stability(self.get_status())
 
 			if prob_result != None:
