@@ -101,7 +101,8 @@ class AssemblyCheckerADMM(AssemblyChecker):
 			x = (xt * alpha + xk * (1 - alpha))
 			z = (torch.clip(alpha * zt + (1 - alpha) * zk + yk / rho, lb, ub))
 			y = (yk + rho * (alpha * zt + (1 - alpha) * zk - z))
-		return [x, y, z]
+			dy = y - yk
+		return [x, y, z, dy]
 
 	def tocuda(self, csc):
 		coo = coo_matrix(csc)
@@ -125,6 +126,10 @@ class AssemblyCheckerADMM(AssemblyChecker):
 		self.inv = torch.tensor(inv.todense(), device="cuda")
 		self.AT = torch.tensor(self.A.transpose().todense(), device="cuda")
 		self.A = torch.tensor(self.A.todense(), device="cuda")
+		self.xk = None
+		self.yk = None
+		self.zk = None
+
 
 	def check_stability(self, status):
 		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
@@ -139,32 +144,36 @@ class AssemblyCheckerADMM(AssemblyChecker):
 		lb = np.hstack([-self.g, np.ones(self.Kf.shape[0]) * -self.inf, lb_f])
 		ub = np.hstack([-self.g, np.zeros(self.Kf.shape[0]), ub_f])
 
-		lb = torch.tensor(lb, device='cuda', dtype=torch.float)
-		ub = torch.tensor(ub, device='cuda', dtype=torch.float)
+		lb = torch.tensor(lb, device='cuda', dtype=torch.float64)
+		ub = torch.tensor(ub, device='cuda', dtype=torch.float64)
 
-		xk = torch.zeros(self.A.shape[1], device='cuda', dtype=torch.float)
-		yk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float)
-		zk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float)
+		if self.xk == None:
+			self.xk = torch.zeros(self.A.shape[1], device='cuda', dtype=torch.float64)
+			self.yk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float64)
+			self.zk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float64)
+		else:
+			self.zk = self.A @ self.xk
 
 		start = perf_counter()
 		for k in range(5000):
-			[xk, yk, zk] = self.admm_func(xk, yk, zk, self.A, self.AT, self.inv, self.sigma, self.rho, self.alpha, lb, ub)
+			[self.xk, self.yk, self.zk, dy] = self.admm_func(self.xk, self.yk, self.zk, self.A, self.AT, self.inv, self.sigma, self.rho, self.alpha, lb, ub)
 			#, r_dual: {torch.linalg.norm(self.AT @ y)}")
 
 		torch.cuda.synchronize()
 		end = perf_counter()
 		print(f"time {(end - start)}")
 
-		x = xk.clone()
-		z = zk.clone()
-		# print(f"eq {np.linalg.norm(self.K @ x + self.g)}")
-		# print(f"fr {np.max(self.Kf @ x)}")
-		# print(f"bound {np.linalg.norm(np.clip(x, lb_f, ub_f) - x)}")
+		x = self.xk.clone()
+		z = self.zk.clone()
 		r_prim = torch.linalg.norm(self.A @ x - z)
+		infea0 = torch.dot(ub, dy + torch.abs(dy)) / 2.0 + torch.dot(lb, torch.abs(dy) - dy) / 2.0
+		infea1 = torch.linalg.norm(self.AT @ dy, ord=torch.inf)
+		dynorm = torch.linalg.norm(dy, ord=torch.inf)
+		print(infea0 / dynorm, infea1 / dynorm)
 		if r_prim < 1E-4:
 			return r_prim
 		else:
-			return None
+			return r_prim
 
 class AssemblyCheckerGurobi(AssemblyChecker):
 
@@ -309,6 +318,11 @@ class AssemblyGUI(AssemblyCheckerADMM):
 			self.part_colors.append(obj.get_color())
 			obj.set_edge_width(1)
 			obj.add_to_group(assembly_group)
+
+			if part_id == 32:
+				obj.set_enabled(False)
+			if part_id == 33:
+				obj.set_enabled(False)
 
 		assembly_group.set_hide_descendants_from_structure_lists(True)
 
