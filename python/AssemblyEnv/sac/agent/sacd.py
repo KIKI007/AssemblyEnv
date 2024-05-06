@@ -2,34 +2,33 @@ import os
 import numpy as np
 import torch
 from torch.optim import Adam
-
+import math
 from .base import BaseAgent
-from sacd.model import TwinnedQNetwork, CateoricalPolicy
-from sacd.utils import disable_gradients
-
+from AssemblyEnv.sac.model import TwinnedQNetwork, CateoricalPolicy
+from AssemblyEnv.sac.utils import disable_gradients
 
 class SacdAgent(BaseAgent):
-
     def __init__(self, env, test_env, log_dir, num_steps=100000, batch_size=64,
-                 lr=0.0003, memory_size=1000000, gamma=0.99, multi_step=1,
-                 target_entropy_ratio=0.98, start_steps=20000,
+                 lr=0.0003, memory_size=1000000, gamma=0.90, multi_step=1,
+                 target_entropy_ratio=0.1, start_steps=20000, num_eval_steps = 1000,
                  update_interval=4, target_update_interval=8000,
-                 use_per=False, dueling_net=False, num_eval_steps=125000,
-                 max_episode_steps=27000, log_interval=10, eval_interval=1000,
+                 use_per=False, dueling_net=False, log_interval=10, eval_interval=1000,
                  cuda=True, seed=0):
         super().__init__(
             env, test_env, log_dir, num_steps, batch_size, memory_size, gamma,
-            multi_step, target_entropy_ratio, start_steps, update_interval,
-            target_update_interval, use_per, num_eval_steps, max_episode_steps,
+            multi_step, target_entropy_ratio, start_steps, num_eval_steps, update_interval,
+            target_update_interval, use_per,
             log_interval, eval_interval, cuda, seed)
 
         # Define networks.
         self.policy = CateoricalPolicy(
             self.env.observation_space.shape[0], self.env.action_space.n
             ).to(self.device)
+
         self.online_critic = TwinnedQNetwork(
             self.env.observation_space.shape[0], self.env.action_space.n,
             dueling_net=dueling_net).to(device=self.device)
+
         self.target_critic = TwinnedQNetwork(
             self.env.observation_space.shape[0], self.env.action_space.n,
             dueling_net=dueling_net).to(device=self.device).eval()
@@ -49,22 +48,23 @@ class SacdAgent(BaseAgent):
             -np.log(1.0 / self.env.action_space.n) * target_entropy_ratio
 
         # We optimize log(alpha), instead of alpha.
-        self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
+        self.log_alpha = torch.tensor([math.log(0.5)], requires_grad=True, device=self.device)
         self.alpha = self.log_alpha.exp()
         self.alpha_optim = Adam([self.log_alpha], lr=lr)
 
     def explore(self, state):
+        state = torch.tensor(state, device="cuda", dtype=torch.float)
+        state = state.reshape(-1, self.env.observation_space.shape[0])
+
         # Act with randomness.
-        state = torch.ByteTensor(
-            state[None, ...]).to(self.device).float() / 255.
         with torch.no_grad():
             action, _, _ = self.policy.sample(state)
         return action.item()
 
     def exploit(self, state):
         # Act without randomness.
-        state = torch.ByteTensor(
-            state[None, ...]).to(self.device).float() / 255.
+        state = torch.tensor(state, device="cuda", dtype=torch.float)
+        state = state.reshape(-1, self.env.observation_space.shape[0])
         with torch.no_grad():
             action = self.policy.act(state)
         return action.item()
@@ -115,7 +115,6 @@ class SacdAgent(BaseAgent):
         with torch.no_grad():
             # Q for every actions to calculate expectations of Q.
             q1, q2 = self.online_critic(states)
-            q = torch.min(q1, q2)
 
         # Expectations of entropies.
         entropies = -torch.sum(
@@ -126,7 +125,7 @@ class SacdAgent(BaseAgent):
 
         # Policy objective is maximization of (Q + alpha * entropy) with
         # priority weights.
-        policy_loss = (weights * (- q - self.alpha * entropies)).mean()
+        policy_loss = (weights * (-q - self.alpha * entropies)).mean()
 
         return policy_loss, entropies.detach()
 

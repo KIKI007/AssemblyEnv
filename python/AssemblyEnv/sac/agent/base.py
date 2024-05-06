@@ -4,18 +4,17 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from sacd.memory import LazyMultiStepMemory, LazyPrioritizedMultiStepMemory
-from sacd.utils import update_params, RunningMeanStats
+from AssemblyEnv.sac.memory import LazyMultiStepMemory, LazyPrioritizedMultiStepMemory
+from AssemblyEnv.sac.utils import update_params, RunningMeanStats
 
 
 class BaseAgent(ABC):
 
     def __init__(self, env, test_env, log_dir, num_steps=100000, batch_size=64,
-                 memory_size=1000000, gamma=0.99, multi_step=1,
-                 target_entropy_ratio=0.98, start_steps=20000,
+                 memory_size=1000000, gamma=0.9, multi_step=1,
+                 target_entropy_ratio=0.98, start_steps=20000, num_eval_steps = 1000,
                  update_interval=4, target_update_interval=8000,
-                 use_per=False, num_eval_steps=125000, max_episode_steps=27000,
-                 log_interval=10, eval_interval=1000, cuda=True, seed=0):
+                 use_per=False, log_interval=10, eval_interval=1000, cuda=True, seed=0):
         super().__init__()
         self.env = env
         self.test_env = test_env
@@ -68,7 +67,7 @@ class BaseAgent(ABC):
         self.target_update_interval = target_update_interval
         self.use_per = use_per
         self.num_eval_steps = num_eval_steps
-        self.max_episode_steps = max_episode_steps
+        self.max_episode_steps = env.observation_space.shape[0] * 2
         self.log_interval = log_interval
         self.eval_interval = eval_interval
 
@@ -120,7 +119,7 @@ class BaseAgent(ABC):
         episode_steps = 0
 
         done = False
-        state = self.env.reset()
+        state = self.env.reset()[0]
 
         while (not done) and episode_steps <= self.max_episode_steps:
 
@@ -129,7 +128,7 @@ class BaseAgent(ABC):
             else:
                 action = self.explore(state)
 
-            next_state, reward, done, _ = self.env.step(action)
+            next_state, reward, done, truncated, _ = self.env.step(action)
 
             # Clip reward to [-1.0, 1.0].
             clipped_reward = max(min(reward, 1.0), -1.0)
@@ -185,9 +184,11 @@ class BaseAgent(ABC):
         update_params(self.q2_optim, q2_loss)
         update_params(self.policy_optim, policy_loss)
         update_params(self.alpha_optim, entropy_loss)
-
         self.alpha = self.log_alpha.exp()
 
+        # self.alpha = torch.tensor([0.01], device=self.device)
+        # self.log_alpha = torch.log(torch.FloatTensor([self.alpha])).to(self.device)
+        #
         if self.use_per:
             self.memory.update_priority(errors)
 
@@ -221,13 +222,13 @@ class BaseAgent(ABC):
         total_return = 0.0
 
         while True:
-            state = self.test_env.reset()
+            state = self.test_env.reset()[0]
             episode_steps = 0
             episode_return = 0.0
             done = False
             while (not done) and episode_steps <= self.max_episode_steps:
                 action = self.exploit(state)
-                next_state, reward, done, _ = self.test_env.step(action)
+                next_state, reward, done, truncated, _ = self.test_env.step(action)
                 num_steps += 1
                 episode_steps += 1
                 episode_return += reward
@@ -236,17 +237,23 @@ class BaseAgent(ABC):
             num_episodes += 1
             total_return += episode_return
 
+            break
+
             if num_steps > self.num_eval_steps:
                 break
 
         mean_return = total_return / num_episodes
 
-        if mean_return > self.best_eval_score:
-            self.best_eval_score = mean_return
+        if num_steps > self.best_eval_score:
+            self.best_eval_score = num_steps
             self.save_models(os.path.join(self.model_dir, 'best'))
 
         self.writer.add_scalar(
             'reward/test', mean_return, self.steps)
+
+        self.writer.add_scalar(
+            'stats/mean step', num_steps / num_episodes, self.steps)
+
         print('-' * 60)
         print(f'Num steps: {self.steps:<5}  '
               f'return: {mean_return:<5.1f}')

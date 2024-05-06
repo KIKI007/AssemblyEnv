@@ -64,6 +64,7 @@ class AssemblyChecker:
 			self.g = self.analyzer.vecG
 			self.Kf = csc_matrix(self.analyzer.matFr)
 			self.create_solver()
+
 	def create_solver(self):
 		pass
 
@@ -91,6 +92,20 @@ class AssemblyCheckerADMM(AssemblyChecker):
 
 	def __init__(self, boundaries):
 		super(AssemblyCheckerADMM, self).__init__(boundaries)
+		self.sigma = 1E-6
+		self.rho = 0.1
+		self.alpha = 1.6
+
+		self.prime_inf = 1E-4
+		self.prime_fea = 1E-4
+
+		self.xk = None
+		self.yk = None
+		self.inf = 1
+
+		self.device = "cuda" if torch.cuda.is_available() else "cpu"
+		self.data_type = torch.float32
+		torch.set_float32_matmul_precision("highest")
 
 	@torch.compile
 	def admm_func(self, xk, yk, zk, A, AT, inv, sigma, rho, alpha, lb, ub):
@@ -104,76 +119,62 @@ class AssemblyCheckerADMM(AssemblyChecker):
 			dy = y - yk
 		return [x, y, z, dy]
 
-	def tocuda(self, csc):
-		coo = coo_matrix(csc)
-		values = coo.data
-		indices = np.vstack((coo.row, coo.col))
-		i = torch.LongTensor(indices)
-		v = torch.FloatTensor(values)
-		shape = coo.shape
-		matrix = torch.sparse_coo_tensor(i, v, torch.Size(shape)).to('cuda')
-		return matrix.to_dense()
-
 	def create_solver(self):
-		self.sigma = 1E-6
-		self.rho = 0.1
-		self.alpha = 1.6
+
+		# lhs = σI + ρA'A
+		# A = [K, Kf, I]
 		I = sp.sparse.identity(self.analyzer.n_var())
 		self.A = vstack([self.K, self.Kf, I])
 		self.lhs = csc_matrix(self.sigma * sp.sparse.identity(self.A.shape[1]) +(self.A.transpose() @ self.A) * self.rho)
+
+		# factorization
 		self.lhs_factor = cholesky(self.lhs)
 		inv = self.lhs_factor.inv()
-		self.inv = torch.tensor(inv.todense(), device="cuda")
-		self.AT = torch.tensor(self.A.transpose().todense(), device="cuda")
-		self.A = torch.tensor(self.A.todense(), device="cuda")
-		self.xk = None
-		self.yk = None
-		self.zk = None
 
-
+		# cuda
+		self.inv = torch.tensor(inv.todense(), device=self.device, dtype=self.data_type)
+		self.AT = torch.tensor(self.A.transpose().todense(), device=self.device, dtype=self.data_type)
+		self.A = torch.tensor(self.A.todense(), device=self.device, dtype=self.data_type)
+	def inf_norm(self, x):
+		return torch.max(torch.abs(x))
 	def check_stability(self, status):
+
 		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
 		[ubind, ubval] = self.analyzer.upbnd(np.array(status))
-
 		lb_f = np.ones(self.analyzer.n_var(), dtype=float) * -self.inf
 		lb_f[lbind] = lbval
-
 		ub_f = np.ones(self.analyzer.n_var(), dtype=float) * self.inf
 		ub_f[ubind] = ubval
-
 		lb = np.hstack([-self.g, np.ones(self.Kf.shape[0]) * -self.inf, lb_f])
 		ub = np.hstack([-self.g, np.zeros(self.Kf.shape[0]), ub_f])
-
-		lb = torch.tensor(lb, device='cuda', dtype=torch.float64)
-		ub = torch.tensor(ub, device='cuda', dtype=torch.float64)
+		lb = torch.tensor(lb, device=self.device, dtype=self.data_type)
+		ub = torch.tensor(ub, device=self.device, dtype=self.data_type)
 
 		if self.xk == None:
-			self.xk = torch.zeros(self.A.shape[1], device='cuda', dtype=torch.float64)
-			self.yk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float64)
-			self.zk = torch.zeros(self.A.shape[0], device='cuda', dtype=torch.float64)
+			self.xk = torch.zeros(self.A.shape[1], device=self.device, dtype=self.data_type)
+			self.yk = torch.zeros(self.A.shape[0], device=self.device, dtype=self.data_type)
+			zk = torch.zeros(self.A.shape[0], device=self.device, dtype=self.data_type)
 		else:
-			self.zk = self.A @ self.xk
+			zk = self.A @ self.xk
 
 		start = perf_counter()
 		for k in range(5000):
-			[self.xk, self.yk, self.zk, dy] = self.admm_func(self.xk, self.yk, self.zk, self.A, self.AT, self.inv, self.sigma, self.rho, self.alpha, lb, ub)
-			#, r_dual: {torch.linalg.norm(self.AT @ y)}")
-
+			[self.xk, self.yk, zk, dy] = self.admm_func(self.xk, self.yk, zk, self.A, self.AT, self.inv, self.sigma, self.rho, self.alpha, lb, ub)
 		torch.cuda.synchronize()
 		end = perf_counter()
-		print(f"time {(end - start)}")
 
-		x = self.xk.clone()
-		z = self.zk.clone()
-		r_prim = torch.linalg.norm(self.A @ x - z)
-		infea0 = torch.dot(ub, dy + torch.abs(dy)) / 2.0 + torch.dot(lb, torch.abs(dy) - dy) / 2.0
-		infea1 = torch.linalg.norm(self.AT @ dy, ord=torch.inf)
-		dynorm = torch.linalg.norm(dy, ord=torch.inf)
-		print(infea0 / dynorm, infea1 / dynorm)
-		if r_prim < 1E-4:
+		pinf0 = (torch.dot(ub, dy + torch.abs(dy)) / 2.0 + torch.dot(lb, torch.abs(dy) - dy) / 2.0) / self.inf_norm(dy)
+		pinf1 = (torch.linalg.norm(self.AT @ dy, ord=torch.inf)) / self.inf_norm(dy)
+
+		#tol_prim = self.tol_abs + self.tol_rel * torch.max(self.inf_norm(self.A @ self.xk), self.inf_norm(zk))
+		r_prim = self.inf_norm(self.A @ self.xk - zk)
+		print(f"time {end - start}, prim_inf {pinf1}, prim_fea {r_prim.cpu()}")
+
+		if pinf0 < self.prime_inf and pinf1 < self.prime_inf:
+			return None
+		elif r_prim < self.prime_fea:
 			return r_prim
-		else:
-			return r_prim
+		return None
 
 class AssemblyCheckerGurobi(AssemblyChecker):
 
@@ -211,7 +212,7 @@ class AssemblyCheckerGurobi(AssemblyChecker):
 
 class AssemblyCheckerMosek(AssemblyChecker):
 
-	def __init__(self, boundaries):
+	def __init__(self, boundaries = None):
 		super(AssemblyCheckerMosek, self).__init__(boundaries)
 
 	def create_solver(self):
@@ -230,6 +231,8 @@ class AssemblyCheckerMosek(AssemblyChecker):
 		zero = np.zeros(self.analyzer.n_var())
 		self.lb_con = self.solver.constraint('lb', self.varf, mo.Domain.greaterThan(0))
 		self.ub_con = self.solver.constraint('ub', self.varf, mo.Domain.lessThan(0))
+		#self.solver.setSolverParam("optimizer", "primalSimplex")
+		#self.solver.setLogHandler(sys.stdout)
 
 	def check_stability(self, status):
 		[lbind, lbval] = self.analyzer.lobnd(np.array(status))
@@ -248,7 +251,7 @@ class AssemblyCheckerMosek(AssemblyChecker):
 		else:
 			return None
 
-class AssemblyGUI(AssemblyCheckerADMM):
+class AssemblyGUI(AssemblyCheckerMosek):
 
 	def __init__(self, boundaries = None):
 		super(AssemblyGUI, self).__init__(boundaries)

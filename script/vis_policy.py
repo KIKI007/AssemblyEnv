@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import polyscope as ps
-from AssemblyEnv.geometry import AssemblyChecker, AssemblyGUI
+from AssemblyEnv.geometry import AssemblyChecker, AssemblyGUI, AssemblyCheckerMosek
 from AssemblyEnv.reinforce.env import RobotPlayground, AssemblyPlayground
 from multiprocessing import Process, Queue
 from compas_eve import Message
@@ -14,18 +14,20 @@ import time
 import itertools
 import pickle
 from AssemblyEnv import DATA_DIR
+import torch
 
 def test(queue):
     parts = queue.get()
     #assembly = AssemblyChecker(parts)
 
-    assembly = AssemblyChecker()
+    assembly = AssemblyCheckerMosek()
     assembly.load_from_file(DATA_DIR + "/block/dome_partial.obj")
     env = AssemblyPlayground(assembly)
     #env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
-    model = PPO.load(f"models/dome_partial/PPO3/{0}", env)
+
+    model = PPO.load(f"models/dome_partial/PPO3/{2}", env)
 
     obs, info = env.reset_random()
     env.send()
@@ -69,6 +71,7 @@ def gui(queue):
 
 if __name__ == "__main__":
     # gui()
+    torch.multiprocessing.set_start_method('spawn')
     queue1 = Queue()
     queue2 = Queue()
     # parts = [[[4.0, 3.0], [5.0, 3.0], [5.0, 5.0], [4.0, 5.0]],

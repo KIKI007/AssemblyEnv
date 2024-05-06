@@ -33,7 +33,7 @@ class AssemblyPlayground(gym.Env):
 		return label
 
 	def _get_obs(self):
-		return self._state
+		return np.copy(self._state)
 
 	def _get_info(self):
 		return {
@@ -45,6 +45,9 @@ class AssemblyPlayground(gym.Env):
 
 	def n_install(self):
 		return np.sum(self._state)
+
+	def seed(self, seed):
+		super().reset(seed=seed)
 
 	def reset_random(self, seed=None, options=None):
 		super().reset(seed=seed)
@@ -73,10 +76,11 @@ class AssemblyPlayground(gym.Env):
 	def step(self, action):
 
 		terminated = False
-		reward = 0
+		reward = 0.0
 
 		# cannot take duplicate action
 		if self._state[action] != 0:
+			self._state[action] = -1
 			terminated = True
 			reward = -1
 		else:
