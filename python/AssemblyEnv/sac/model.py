@@ -25,7 +25,7 @@ class BaseNetwork(nn.Module):
 class QNetwork(BaseNetwork):
     def __init__(self, input_channels,
                  num_actions,
-                 hidden_channels = 64,
+                 hidden_channels = 128,
                  dueling_net=False):
         super().__init__()
 

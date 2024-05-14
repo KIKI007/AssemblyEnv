@@ -25,7 +25,7 @@ class AssemblyNetwork(nn.Module):
     def __init__(
         self,
         feature_dim: int,
-        last_layer_dim: int = 64,
+        last_layer_dim: int = 256,
     ):
         super(AssemblyNetwork, self).__init__()
         # IMPORTANT:

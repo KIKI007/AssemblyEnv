@@ -21,15 +21,15 @@ def test(queue):
     #assembly = AssemblyChecker(parts)
 
     assembly = AssemblyCheckerMosek()
-    assembly.load_from_file(DATA_DIR + "/block/dome_partial.obj")
+    assembly.load_from_file(DATA_DIR + "/block/dome.obj")
     env = AssemblyPlayground(assembly)
     #env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
 
-    model = PPO.load(f"models/dome_partial/PPO3/{2}", env)
+    model = PPO.load(f"models/dome/PPO/{56}", env)
 
-    obs, info = env.reset_random()
+    obs, info = env.reset()
     env.send()
     while True:
         action, _state = model.predict(obs, deterministic=False)
@@ -38,7 +38,7 @@ def test(queue):
         if terminated or truncated:
             if reward < 1:
                 time.sleep(5)
-            obs, info = env.reset_random()
+            obs, info = env.reset()
             env.send()
 
 
@@ -50,7 +50,7 @@ def gui(queue):
     global viewer
     parts = queue.get()
     viewer = AssemblyGUI()
-    viewer.load_from_file(DATA_DIR + "/block/dome_partial.obj")
+    viewer.load_from_file(DATA_DIR + "/block/dome.obj")
     #viewer = AssemblyGUI(parts)
 
     ps.init()
