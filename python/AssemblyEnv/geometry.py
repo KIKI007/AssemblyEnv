@@ -58,7 +58,7 @@ class AssemblyChecker:
 			partList = [x for x in range(self.assembly.n_part())]
 			self.contacts = self.assembly.contacts(partList, 1.0)
 			self.analyzer = self.assembly.analyzer(self.contacts, False)
-			self.analyzer.friction = 0.5
+			self.analyzer.friction = 1.0
 			self.analyzer.compute()
 			self.K = csc_matrix(self.analyzer.matEq)
 			self.g = self.analyzer.vecG
