@@ -58,7 +58,7 @@ class AssemblyChecker:
 			partList = [x for x in range(self.assembly.n_part())]
 			self.contacts = self.assembly.contacts(partList, 1.0)
 			self.analyzer = self.assembly.analyzer(self.contacts, False)
-			self.analyzer.friction = 0.5
+			self.analyzer.friction = 1.0
 			self.analyzer.compute()
 			self.K = csc_matrix(self.analyzer.matEq)
 			self.g = self.analyzer.vecG
@@ -321,11 +321,6 @@ class AssemblyGUI(AssemblyCheckerMosek):
 			self.part_colors.append(obj.get_color())
 			obj.set_edge_width(1)
 			obj.add_to_group(assembly_group)
-
-			if part_id == 32:
-				obj.set_enabled(False)
-			if part_id == 33:
-				obj.set_enabled(False)
 
 		assembly_group.set_hide_descendants_from_structure_lists(True)
 

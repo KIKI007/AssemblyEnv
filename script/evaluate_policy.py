@@ -1,10 +1,6 @@
-from multiprocessing import Process, Queue
-import os
-import numpy as np
-from AssemblyEnv.reinforce.env import AssemblyPlayground, RobotPlayground
-from multiprocessing import Process, Queue
+from AssemblyEnv.env import RobotPlayground
+from multiprocessing import Queue
 from stable_baselines3 import PPO
-import time
 from AssemblyEnv.geometry import Assembly2D
 import itertools
 def evaluate(queue):

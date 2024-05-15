@@ -1,18 +1,13 @@
-import os
-import numpy as np
 import polyscope as ps
-from AssemblyEnv.geometry import AssemblyChecker, AssemblyGUI, AssemblyCheckerMosek
-from AssemblyEnv.reinforce.env import RobotPlayground, AssemblyPlayground
+from AssemblyEnv.geometry import AssemblyGUI, AssemblyCheckerMosek
+from AssemblyEnv.env import AssemblyPlayground
 from multiprocessing import Process, Queue
 from compas_eve import Message
 from compas_eve import Subscriber
-from compas_eve import Publisher
 from compas_eve import Topic
 from compas_eve.mqtt import MqttTransport
 from AssemblyEnv.sac.model import CateoricalPolicy
 import time
-import itertools
-import pickle
 from AssemblyEnv import DATA_DIR
 import torch
 
@@ -33,8 +28,8 @@ def test(queue):
     while True:
         state = torch.tensor(obs, device="cpu", dtype=torch.float)
         state = state.reshape(-1, 72)
-        action, action_probs, log_action_probs = model.sample(state)
-        #action = model.act(state)
+        #action, action_probs, log_action_probs = model.sample(state)
+        action = model.act(state)
         obs, reward, terminated, truncated, info = env.step(action)
         if terminated or truncated:
             if reward < 1:

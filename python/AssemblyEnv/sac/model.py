@@ -25,7 +25,7 @@ class BaseNetwork(nn.Module):
 class QNetwork(BaseNetwork):
     def __init__(self, input_channels,
                  num_actions,
-                 hidden_channels = 128,
+                 hidden_channels = 64,
                  dueling_net=False):
         super().__init__()
 
@@ -66,7 +66,7 @@ class QNetwork(BaseNetwork):
 
 
 class TwinnedQNetwork(BaseNetwork):
-    def __init__(self, input_channels, num_actions, hidden_channels=64, dueling_net=False):
+    def __init__(self, input_channels, num_actions, hidden_channels=128, dueling_net=False):
         super().__init__()
         self.Q1 = QNetwork(input_channels, num_actions, hidden_channels, dueling_net)
         self.Q2 = QNetwork(input_channels, num_actions, hidden_channels, dueling_net)
