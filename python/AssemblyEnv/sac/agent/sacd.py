@@ -13,12 +13,12 @@ class SacdAgent(BaseAgent):
                  target_entropy_ratio=0.1, start_steps=20000, num_eval_steps = 1000,
                  update_interval=4, target_update_interval=8000,
                  use_per=False, dueling_net=False, log_interval=10, eval_interval=1000,
-                 cuda=True, seed=0):
+                 cuda=True, seed=0, starting_alpha = 0.5):
         super().__init__(
             env, test_env, log_dir, num_steps, batch_size, memory_size, gamma,
             multi_step, target_entropy_ratio, start_steps, num_eval_steps, update_interval,
             target_update_interval, use_per,
-            log_interval, eval_interval, cuda, seed)
+            log_interval, eval_interval, cuda, seed, starting_alpha)
 
         # Define networks.
         self.policy = CateoricalPolicy(
@@ -48,7 +48,7 @@ class SacdAgent(BaseAgent):
             -np.log(1.0 / self.env.action_space.n) * target_entropy_ratio
 
         # We optimize log(alpha), instead of alpha.
-        self.log_alpha = torch.tensor([math.log(0.5)], requires_grad=True, device=self.device)
+        self.log_alpha = torch.tensor([math.log(starting_alpha)], requires_grad=True, device=self.device)
         self.alpha = self.log_alpha.exp()
         self.alpha_optim = Adam([self.log_alpha], lr=lr)
 

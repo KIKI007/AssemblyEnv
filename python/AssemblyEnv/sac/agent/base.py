@@ -14,7 +14,7 @@ class BaseAgent(ABC):
                  memory_size=1000000, gamma=0.9, multi_step=1,
                  target_entropy_ratio=0.98, start_steps=20000, num_eval_steps = 1000,
                  update_interval=4, target_update_interval=8000,
-                 use_per=False, log_interval=10, eval_interval=1000, cuda=True, seed=0):
+                 use_per=False, log_interval=10, eval_interval=1000, cuda=True, seed=0, starting_alpha = 0.5):
         super().__init__()
         self.env = env
         self.test_env = test_env
@@ -186,9 +186,6 @@ class BaseAgent(ABC):
         update_params(self.alpha_optim, entropy_loss)
         self.alpha = self.log_alpha.exp()
 
-        # self.alpha = torch.tensor([0.01], device=self.device)
-        # self.log_alpha = torch.log(torch.FloatTensor([self.alpha])).to(self.device)
-        #
         if self.use_per:
             self.memory.update_priority(errors)
 

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -66,7 +67,7 @@ class QNetwork(BaseNetwork):
 
 
 class TwinnedQNetwork(BaseNetwork):
-    def __init__(self, input_channels, num_actions, hidden_channels=128, dueling_net=False):
+    def __init__(self, input_channels, num_actions, hidden_channels=64, dueling_net=False):
         super().__init__()
         self.Q1 = QNetwork(input_channels, num_actions, hidden_channels, dueling_net)
         self.Q2 = QNetwork(input_channels, num_actions, hidden_channels, dueling_net)
@@ -79,7 +80,7 @@ class TwinnedQNetwork(BaseNetwork):
 
 class CateoricalPolicy(BaseNetwork):
 
-    def __init__(self,  input_channels, num_actions, hidden_channels=64, dueling_net=False):
+    def __init__(self,  input_channels, num_actions, hidden_channels=128, dueling_net=False):
         super().__init__()
 
         self.head = nn.Sequential(
@@ -93,7 +94,16 @@ class CateoricalPolicy(BaseNetwork):
 
     def mask_logits(self, states):
         action_logits = self.head(states)
-        action_logits += states * (-self.inf)
+        n_part = int(states.shape[1] / 2)
+        install_states = states[:, : n_part]
+        fixed_states = states[:, n_part :]
+
+        used_robot = torch.sum(fixed_states, -1) >= 2
+        robot_penalty = torch.einsum("i, j -> ij", used_robot, torch.ones(n_part, device=states.device))
+
+        action_logits[:, : n_part] += robot_penalty * (-self.inf)
+        action_logits[:, : n_part] += install_states * (-self.inf)
+        action_logits[:, n_part :] += (1 - fixed_states) * (-self.inf)
         return action_logits
 
     def act(self, states):
