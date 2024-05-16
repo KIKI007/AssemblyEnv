@@ -107,7 +107,6 @@ class AssemblyCheckerADMM(AssemblyChecker):
 		self.data_type = torch.float32
 		torch.set_float32_matmul_precision("highest")
 
-	@torch.compile
 	def admm_func(self, xk, yk, zk, A, AT, inv, sigma, rho, alpha, lb, ub):
 		with torch.no_grad():
 			rhs = sigma * xk + AT @ (rho * zk - yk)

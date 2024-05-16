@@ -21,7 +21,7 @@ class BaseNetwork(nn.Module):
         torch.save(self.state_dict(), path)
 
     def load(self, path):
-        self.load_state_dict(torch.load(path))
+        self.load_state_dict(torch.load(path, map_location="cpu"))
 
 class QNetwork(BaseNetwork):
     def __init__(self, input_channels,
