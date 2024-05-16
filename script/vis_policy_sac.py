@@ -2,7 +2,7 @@ import os
 import numpy as np
 import polyscope as ps
 from AssemblyEnv.geometry import AssemblyChecker, AssemblyGUI, AssemblyCheckerMosek
-from AssemblyEnv.reinforce.env import RobotPlayground, AssemblyPlayground
+from AssemblyEnv.env import AssemblyPlayground
 from multiprocessing import Process, Queue
 from compas_eve import Message
 from compas_eve import Subscriber
@@ -19,27 +19,25 @@ import torch
 def test(queue):
     parts = queue.get()
     assembly = AssemblyCheckerMosek(parts)
-    assembly.load_from_file(DATA_DIR + "/block/dome.obj")
-
+    n = assembly.n_part() - 1
     env = AssemblyPlayground(assembly)
-    #env = RobotPlayground(assembly)
     env.render = True
     env.send_time_delay = 0.2
-    model = CateoricalPolicy(72, 72)
-    model.load(f"{DATA_DIR}/../script/logs/dome/model/final/policy.pth")
+    model = CateoricalPolicy(n, n)
+    model.load(f"{DATA_DIR}/../script/logs/stack/model/final/policy.pth")
 
-    obs, info = env.reset()
+    obs, info = env.reset_random()
     env.send()
     while True:
         state = torch.tensor(obs, device="cpu", dtype=torch.float)
-        state = state.reshape(-1, 72)
-        action, action_probs, log_action_probs = model.sample(state)
-        #action = model.act(state)
+        state = state.reshape(-1, n)
+        #action, action_probs, log_action_probs = model.sample(state)
+        action = model.act(state)
         obs, reward, terminated, truncated, info = env.step(action)
         if terminated or truncated:
             if reward < 1:
                 time.sleep(5)
-            obs, info = env.reset()
+            obs, info = env.reset_random()
             env.send()
 
 
@@ -51,7 +49,6 @@ def gui(queue):
     global viewer
     parts = queue.get()
     viewer = AssemblyGUI(parts)
-    viewer.load_from_file(DATA_DIR + "/block/dome.obj")
 
     ps.init()
     ps.set_navigation_style("turntable")
@@ -74,7 +71,14 @@ if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
     queue1 = Queue()
     queue2 = Queue()
-    parts =   [[[0.0, 0.0], [1.0, 0.0], [1.0, 2.0], [0.0, 2.0]], [[0.0, 2.0], [5.0, 2.0], [5.0, 3.0], [0.0, 3.0]], [[5.0, 0.0], [6.0, 0.0], [6.0, 3.0], [5.0, 3.0]], [[2.0, 0.0], [3.0, 0.0], [3.0, 2.0], [2.0, 2.0]], [[5.0, 4.0], [6.0, 4.0], [6.0, 6.0], [5.0, 6.0]], [[2.0, 3.0], [3.0, 3.0], [3.0, 6.0], [2.0, 6.0]], [[2.0, 6.0], [6.0, 6.0], [6.0, 7.0], [2.0, 7.0]], [[7.0, 0.0], [8.0, 0.0], [8.0, 3.0], [7.0, 3.0]], [[10.0, 0.0], [11.0, 0.0], [11.0, 7.0], [10.0, 7.0]], [[2.0, 7.0], [11.0, 7.0], [11.0, 8.0], [2.0, 8.0]], [[3.0, 3.0], [10.0, 3.0], [10.0, 4.0], [3.0, 4.0]]]
+    parts = [[[4.0, 3.0], [5.0, 3.0], [5.0, 5.0], [4.0, 5.0]],
+             [[0.0, 3.0], [1.0, 3.0], [1.0, 5.0], [0.0, 5.0]],
+             [[2.0, 3.0], [3.0, 3.0], [3.0, 5.0], [2.0, 5.0]],
+             [[2.0, 0.0], [3.0, 0.0], [3.0, 2.0], [2.0, 2.0]],
+             [[0.0, 0.0], [1.0, 0.0], [1.0, 2.0], [0.0, 2.0]],
+             [[4.0, 0.0], [5.0, 0.0], [5.0, 2.0], [4.0, 2.0]],
+             [[0.0, 2.0], [5.0, 2.0], [5.0, 3.0], [0.0, 3.0]],
+             [[0.0, 5.0], [5.0, 5.0], [5.0, 6.0], [0.0, 6.0]]]
 
     p1 = Process(target=gui, args=(queue1, ))
     p2 = Process(target=test, args=(queue2, ))

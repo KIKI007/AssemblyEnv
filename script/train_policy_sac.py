@@ -1,5 +1,5 @@
 from AssemblyEnv.geometry import AssemblyChecker, AssemblyCheckerMosek
-from AssemblyEnv.reinforce.env import AssemblyPlayground, RobotPlayground
+from AssemblyEnv.env import AssemblyPlayground
 from AssemblyEnv import DATA_DIR
 from AssemblyEnv.sac.agent.sacd import SacdAgent
 
@@ -11,6 +11,13 @@ def train_1robot(assembly, name = ""):
     agent.run()
 
 if __name__ == "__main__":
-    assembly = AssemblyCheckerMosek()
-    assembly.load_from_file(DATA_DIR + "/block/dome.obj")
-    train_1robot(assembly, "dome")
+    parts = [[[4.0, 3.0], [5.0, 3.0], [5.0, 5.0], [4.0, 5.0]],
+             [[0.0, 3.0], [1.0, 3.0], [1.0, 5.0], [0.0, 5.0]],
+             [[2.0, 3.0], [3.0, 3.0], [3.0, 5.0], [2.0, 5.0]],
+             [[2.0, 0.0], [3.0, 0.0], [3.0, 2.0], [2.0, 2.0]],
+             [[0.0, 0.0], [1.0, 0.0], [1.0, 2.0], [0.0, 2.0]],
+             [[4.0, 0.0], [5.0, 0.0], [5.0, 2.0], [4.0, 2.0]],
+             [[0.0, 2.0], [5.0, 2.0], [5.0, 3.0], [0.0, 3.0]],
+             [[0.0, 5.0], [5.0, 5.0], [5.0, 6.0], [0.0, 6.0]]]
+    assembly = AssemblyCheckerMosek(parts)
+    train_1robot(assembly, "stack")

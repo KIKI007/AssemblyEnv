@@ -28,7 +28,7 @@ class BaseAgent(ABC):
         # torch.backends.cudnn.benchmark = False  # It harms a performance.
 
         self.device = torch.device(
-            "cuda" if cuda and torch.cuda.is_available() else "cpu")
+            "cuda" if cuda and torch.cuda.is_available() else "mps")
 
         # LazyMemory efficiently stores FrameStacked states.
         if use_per:

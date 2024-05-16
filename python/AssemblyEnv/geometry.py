@@ -107,7 +107,6 @@ class AssemblyCheckerADMM(AssemblyChecker):
 		self.data_type = torch.float32
 		torch.set_float32_matmul_precision("highest")
 
-	@torch.compile
 	def admm_func(self, xk, yk, zk, A, AT, inv, sigma, rho, alpha, lb, ub):
 		with torch.no_grad():
 			rhs = sigma * xk + AT @ (rho * zk - yk)
@@ -321,11 +320,6 @@ class AssemblyGUI(AssemblyCheckerMosek):
 			self.part_colors.append(obj.get_color())
 			obj.set_edge_width(1)
 			obj.add_to_group(assembly_group)
-
-			if part_id == 32:
-				obj.set_enabled(False)
-			if part_id == 33:
-				obj.set_enabled(False)
 
 		assembly_group.set_hide_descendants_from_structure_lists(True)
 

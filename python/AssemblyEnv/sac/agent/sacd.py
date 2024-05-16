@@ -53,7 +53,7 @@ class SacdAgent(BaseAgent):
         self.alpha_optim = Adam([self.log_alpha], lr=lr)
 
     def explore(self, state):
-        state = torch.tensor(state, device="cuda", dtype=torch.float)
+        state = torch.tensor(state, device=self.device, dtype=torch.float)
         state = state.reshape(-1, self.env.observation_space.shape[0])
 
         # Act with randomness.
@@ -63,7 +63,7 @@ class SacdAgent(BaseAgent):
 
     def exploit(self, state):
         # Act without randomness.
-        state = torch.tensor(state, device="cuda", dtype=torch.float)
+        state = torch.tensor(state, device=self.device, dtype=torch.float)
         state = state.reshape(-1, self.env.observation_space.shape[0])
         with torch.no_grad():
             action = self.policy.act(state)
