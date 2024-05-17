@@ -15,7 +15,7 @@ def test(queue):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     parts = queue.get()
     assembly = AssemblyCheckerMosek(parts)
-    #assembly.load_from_file(DATA_DIR + "/block/dome.obj")
+    assembly.load_from_file(DATA_DIR + "/block/dome.obj")
 
     env = RobotPlayground(assembly)
 
@@ -23,7 +23,7 @@ def test(queue):
     env.send_time_delay = 0.2
 
     model = CateoricalPolicy()
-    model.load(f"{DATA_DIR}/../logs/arch/model/best/policy.pth", device)
+    model.load(f"{DATA_DIR}/../logs/dome_gnn/model/best/policy.pth", device)
     n_part = env.assembly.n_part()
     edge_index, batch_edge_index, edge_attr, batch_edge_attr = env.compute_batch_graph(1, device)
     model.set_graph(edge_index, batch_edge_index, edge_attr, batch_edge_attr, n_part)
@@ -34,8 +34,8 @@ def test(queue):
     while True:
         state = torch.tensor(obs, device=device, dtype=torch.float)
         state = state.reshape(-1, n_part * 2)
-        #action, action_probs, log_action_probs = model.sample(state)
-        action = model.act(state)
+        action, action_probs, log_action_probs = model.sample(state)
+        #action = model.act(state)
         obs, reward, terminated, truncated, info = env.step(action)
         if terminated or truncated:
             if reward < 1:
@@ -52,7 +52,7 @@ def gui(queue):
     global viewer
     parts = queue.get()
     viewer = AssemblyGUI(parts)
-    #viewer.load_from_file(DATA_DIR + "/block/dome.obj")
+    viewer.load_from_file(DATA_DIR + "/block/dome.obj")
 
     ps.init()
     ps.set_navigation_style("turntable")

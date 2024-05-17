@@ -22,5 +22,5 @@ if __name__ == "__main__":
              # [[0.0, 5.0], [5.0, 5.0], [5.0, 6.0], [0.0, 6.0]]]
 
     assembly = AssemblyCheckerMosek(parts)
-    #assembly.load_from_file(DATA_DIR + "/block/dome.obj")
-    train_1robot(assembly, "arch")
+    assembly.load_from_file(DATA_DIR + "/block/dome.obj")
+    train_1robot(assembly, "dome_gnn")
