@@ -30,12 +30,11 @@ class RobotPlayground(gym.Env):
 	 	# state only covers the status of avaiable parts
 	def terminate_label(self):
 		label = np.ones(self.n_part())
-		label = np.append(label, [2])
+		label[-1] = 2
 		return label
+
 	def current_label(self):
 		label = np.copy(self.install_state()) + np.copy(self.fixed_state())
-		label = np.append(label, [2])
-
 		return label
 
 	def install_state(self):
@@ -59,7 +58,7 @@ class RobotPlayground(gym.Env):
 		return 2 * self.n_part()
 
 	def n_part(self):
-		return self.assembly.n_part() - 1
+		return self.assembly.n_part()
 
 	def n_robot(self):
 		return 2
@@ -81,12 +80,18 @@ class RobotPlayground(gym.Env):
 		super().reset(seed=seed)
 
 		while True:
-			rnd_state = np.random.randint(2, size = self.n_part())
+			install_state = np.random.randint(2, size = self.n_part())
+			fixed_state = np.zeros(self.n_part())
+			fixed_state[-1] = install_state[-1] = 1
+
 			self.clear_state()
-			self.set_install_state(rnd_state)
+			self.set_install_state(install_state)
+			self.set_fixed_state(fixed_state)
+
 			if (self.n_installed() < self.n_part()
 					and self.assembly.check_stability(self.current_label()) != None):
 				break
+
 		observation = self._get_obs()
 		info = self._get_info()
 		self.send()
@@ -97,6 +102,11 @@ class RobotPlayground(gym.Env):
 		super().reset(seed=seed)
 		self.assembly.reset()
 		self._state = np.zeros(self.n_state(), dtype=int)
+
+		# Fixed ground part
+		self._state[self.n_part() - 1] = 1
+		self._state[-1] = 1
+
 		observation = self._get_obs()
 		info = self._get_info()
 		return observation, info
@@ -120,7 +130,7 @@ class RobotPlayground(gym.Env):
 			return False
 
 		# more than available robot
-		if action_type == "install" and np.sum(fixed_state) >= self.n_robot():
+		if action_type == "install" and np.sum(fixed_state) >= self.n_robot() + 1:
 			#print("more than available robot")
 			return False
 
@@ -164,6 +174,7 @@ class RobotPlayground(gym.Env):
 		info = self._get_info()
 		self.send()
 		return observation, reward, terminated, False, info
+
 	def seed(self, seed):
 		super().reset(seed=seed)
 

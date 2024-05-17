@@ -10,14 +10,14 @@ from AssemblyEnv.sac.utils import update_params, RunningMeanStats
 
 class BaseAgent(ABC):
 
-    def __init__(self, env, test_env, log_dir, num_steps=100000, batch_size=64,
+    def __init__(self, env, log_dir, num_steps=100000, batch_size=64,
                  memory_size=1000000, gamma=0.9, multi_step=1,
                  target_entropy_ratio=0.98, start_steps=20000, num_eval_steps = 1000,
                  update_interval=4, target_update_interval=8000,
                  use_per=False, log_interval=10, eval_interval=1000, cuda=True, seed=0, starting_alpha = 0.5):
         super().__init__()
         self.env = env
-        self.test_env = test_env
+        self.test_env = env
 
         # Set seed.
         torch.manual_seed(seed)

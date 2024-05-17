@@ -8,30 +8,34 @@ from AssemblyEnv.sac.model import TwinnedQNetwork, CateoricalPolicy
 from AssemblyEnv.sac.utils import disable_gradients
 
 class SacdAgent(BaseAgent):
-    def __init__(self, env, test_env, log_dir, num_steps=100000, batch_size=64,
+    def __init__(self, env, analyzer, log_dir, num_steps=100000, batch_size=64,
                  lr=0.0003, memory_size=1000000, gamma=0.90, multi_step=1,
                  target_entropy_ratio=0.1, start_steps=20000, num_eval_steps = 1000,
                  update_interval=4, target_update_interval=8000,
                  use_per=False, dueling_net=False, log_interval=10, eval_interval=1000,
                  cuda=True, seed=0, starting_alpha = 0.5):
-        super().__init__(
-            env, test_env, log_dir, num_steps, batch_size, memory_size, gamma,
+        super().__init__(env, log_dir, num_steps, batch_size, memory_size, gamma,
             multi_step, target_entropy_ratio, start_steps, num_eval_steps, update_interval,
             target_update_interval, use_per,
             log_interval, eval_interval, cuda, seed, starting_alpha)
 
+        n_part = env.assembly.n_part()
+        [e0, e1, edge_attr] = analyzer.gnn()
+        e0 = torch.tensor(e0, dtype=torch.long, device=self.device)
+        e1 = torch.tensor(e1, dtype=torch.long, device=self.device)
+
+        edge_attr = torch.tensor(edge_attr, dtype=torch.float32, device=self.device)
+        edge_index = torch.vstack([e0, e1])
+
         # Define networks.
-        self.policy = CateoricalPolicy(
-            self.env.observation_space.shape[0], self.env.action_space.n
-            ).to(self.device)
+        self.policy = CateoricalPolicy().to(self.device)
+        self.policy.set_graph(batch_size, n_part, edge_index, edge_attr)
 
-        self.online_critic = TwinnedQNetwork(
-            self.env.observation_space.shape[0], self.env.action_space.n,
-            dueling_net=dueling_net).to(device=self.device)
+        self.online_critic = TwinnedQNetwork().to(device=self.device)
+        self.online_critic.set_graph(batch_size, n_part, edge_index, edge_attr)
 
-        self.target_critic = TwinnedQNetwork(
-            self.env.observation_space.shape[0], self.env.action_space.n,
-            dueling_net=dueling_net).to(device=self.device).eval()
+        self.target_critic = TwinnedQNetwork().to(device=self.device).eval()
+        self.target_critic.set_graph(batch_size, n_part, edge_index, edge_attr)
 
         # Copy parameters of the learning network to the target network.
         self.target_critic.load_state_dict(self.online_critic.state_dict())
@@ -53,7 +57,7 @@ class SacdAgent(BaseAgent):
         self.alpha_optim = Adam([self.log_alpha], lr=lr)
 
     def explore(self, state):
-        state = torch.tensor(state, device="cuda", dtype=torch.float)
+        state = torch.tensor(state, device=self.device, dtype=torch.float)
         state = state.reshape(-1, self.env.observation_space.shape[0])
 
         # Act with randomness.
@@ -63,7 +67,7 @@ class SacdAgent(BaseAgent):
 
     def exploit(self, state):
         # Act without randomness.
-        state = torch.tensor(state, device="cuda", dtype=torch.float)
+        state = torch.tensor(state, device=self.device, dtype=torch.float)
         state = state.reshape(-1, self.env.observation_space.shape[0])
         with torch.no_grad():
             action = self.policy.act(state)

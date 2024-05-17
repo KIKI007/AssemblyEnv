@@ -3,14 +3,15 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.distributions import Categorical
-from torch_geometric.nn.models import GAT, EdgeCNN
+from torch_geometric.nn.models import GAT
+from torch_geometric.nn import GATConv, Sequential
+from torch.nn import Linear, ReLU, Tanh
 
 def initialize_weights_he(m):
     if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
         torch.nn.init.kaiming_uniform_(m.weight)
         if m.bias is not None:
             torch.nn.init.constant_(m.bias, 0)
-
 
 class Flatten(nn.Module):
     def forward(self, x):
@@ -24,103 +25,107 @@ class BaseNetwork(nn.Module):
     def load(self, path):
         self.load_state_dict(torch.load(path, map_location="cpu"))
 
+    def set_graph(self, batch_size, n_part, edge_index, edge_attr):
+        self.n_part = n_part
+        n_edge = edge_index.shape[1]
+        self.edge_index = edge_index
+        self.edge_attr = edge_attr
+
+        self.batch_edge_attr = edge_attr.repeat(batch_size, 1)
+        self.batch_edge_index = edge_index.repeat(1, batch_size)
+        for i in range(batch_size):
+            self.batch_edge_index[:, n_edge * i: n_edge * (i + 1)] += torch.ones((2, n_edge), dtype=torch.long) * n_part * i;
+
+    def batch_to_graph(self, batch):
+        batch_0 = batch[:, :self.n_part].clone()
+        batch_1 = batch[:, self.n_part: ].clone()
+        graph_0 = batch_0.reshape(-1, 1)
+        graph_1 = batch_1.reshape(-1, 1)
+        return torch.cat([graph_0, graph_1], dim=1)
+
+    def graph_to_batch(self, graph):
+        graph_0 = graph[:, 0].clone()
+        graph_1 = graph[:, 1].clone()
+        batch_0 = graph_0.reshape(-1, self.n_part)
+        batch_1 = graph_1.reshape(-1, self.n_part)
+        return torch.cat([batch_0, batch_1], dim=1)
+
 class QNetwork(BaseNetwork):
-    def __init__(self, input_channels,
-                 num_actions,
-                 hidden_channels = 64,
-                 dueling_net=False):
+    def __init__(self, hidden_channels=16):
+
         super().__init__()
 
-        if not dueling_net:
-            self.head = nn.Sequential(
-                nn.Linear(input_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, num_actions),
-                nn.Tanh())
-        else:
-            self.a_head = nn.Sequential(
-                nn.Linear(input_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, num_actions),
-                nn.Tanh())
-
-            self.v_head = nn.Sequential(
-                nn.Linear(input_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, num_actions),
-                nn.Hardtanh(min_val=-1, max_val=1))
-
-        self.dueling_net = dueling_net
+        self.head = Sequential('x, edge_index, edge_attr',[
+            (GATConv(2, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            ReLU(inplace=True),
+            (GATConv(hidden_channels, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            ReLU(inplace=True),
+            (GATConv(hidden_channels, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            ReLU(inplace=True),
+            (GATConv(hidden_channels, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            Linear(hidden_channels, 2),
+            Tanh()]
+        )
 
     def forward(self, states):
-        if not self.dueling_net:
-            return self.head(states)
+        node_feat = self.batch_to_graph(states)
+        if states.shape[0] == 1:
+            graphout = self.head(x = node_feat, edge_index = self.edge_index, edge_attr = self.edge_attr)
         else:
-            a = self.a_head(states)
-            v = self.v_head(states)
-            return v + a - a.mean(1, keepdim=True)
-
-class QNetworkGNN(BaseNetwork):
-    def __init__(self, input_channels,
-                 num_actions,
-                 hidden_channels = 64,
-                 dueling_net=False):
-        super().__init__()
-
-        if not dueling_net:
-            self.head = nn.Sequential(
-                nn.Linear(input_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, num_actions),
-                nn.Tanh())
-
+            graphout = self.head(x = node_feat, edge_index = self.batch_edge_index, edge_attr = self.batch_edge_attr)
+        return self.graph_to_batch(graphout)
 
 class TwinnedQNetwork(BaseNetwork):
-    def __init__(self, input_channels, num_actions, hidden_channels=64, dueling_net=False):
+    def __init__(self, hidden_channels=16):
         super().__init__()
-        self.Q1 = QNetwork(input_channels, num_actions, hidden_channels, dueling_net)
-        self.Q2 = QNetwork(input_channels, num_actions, hidden_channels, dueling_net)
+        self.Q1 = QNetwork(hidden_channels)
+        self.Q2 = QNetwork(hidden_channels)
 
     def forward(self, states):
         q1 = self.Q1(states)
         q2 = self.Q2(states)
         return q1, q2
 
+    def set_graph(self, batch_size, n_part, edge_index, edge_attr):
+        self.Q1.set_graph(batch_size, n_part, edge_index, edge_attr)
+        self.Q2.set_graph(batch_size, n_part, edge_index, edge_attr)
 
 class CateoricalPolicy(BaseNetwork):
 
-    def __init__(self,  input_channels, num_actions, hidden_channels=128, dueling_net=False):
+    def __init__(self, hidden_channels=16):
         super().__init__()
 
-        self.head = nn.Sequential(
-                nn.Linear(input_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, hidden_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(hidden_channels, num_actions))
+        self.head = Sequential('x, edge_index, edge_attr', [
+            (GATConv(2, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            ReLU(inplace=True),
+            (GATConv(hidden_channels, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            ReLU(inplace=True),
+            (GATConv(hidden_channels, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            ReLU(inplace=True),
+            (GATConv(hidden_channels, hidden_channels), 'x, edge_index, edge_attr -> x'),
+            Linear(hidden_channels, 2)]
+        )
 
         self.inf = 1E8
 
     def mask_logits(self, states):
-        action_logits = self.head(states)
-        n_part = int(states.shape[1] / 2)
-        install_states = states[:, : n_part]
-        fixed_states = states[:, n_part :]
+        node_feat = self.batch_to_graph(states)
+        if states.shape[0] == 1:
+            graph_action_logits = self.head(x = node_feat, edge_index = self.edge_index, edge_attr = self.edge_attr)
+        else:
+            graph_action_logits = self.head(x = node_feat, edge_index = self.batch_edge_index, edge_attr = self.batch_edge_attr)
+        action_logits = self.graph_to_batch(graph_action_logits)
 
-        used_robot = torch.sum(fixed_states, -1) >= 2
-        robot_penalty = torch.einsum("i, j -> ij", used_robot, torch.ones(n_part, device=states.device))
+        install_states = states[:, : self.n_part]
+        fixed_states = states[:, self.n_part :]
 
-        action_logits[:, : n_part] += robot_penalty * (-self.inf)
-        action_logits[:, : n_part] += install_states * (-self.inf)
-        action_logits[:, n_part :] += (1 - fixed_states) * (-self.inf)
+        used_robot = torch.sum(fixed_states, -1) >= 3
+        robot_penalty = torch.einsum("i, j -> ij", used_robot, torch.ones(self.n_part, device=states.device))
+
+        action_logits[:, : self.n_part] += robot_penalty * (-self.inf)
+        action_logits[:, : self.n_part] += install_states * (-self.inf)
+        action_logits[:, self.n_part :] += (1 - fixed_states) * (-self.inf)
+        action_logits[:, -1] = -self.inf
         return action_logits
 
     def act(self, states):
