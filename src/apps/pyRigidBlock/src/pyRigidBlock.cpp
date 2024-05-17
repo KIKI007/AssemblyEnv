@@ -32,6 +32,7 @@ NB_MODULE(py_rigidblock, m)
     .def_rw("friction", &rigid_block::Assembly::friction_coeff_)
     .def("set_boundary", &rigid_block::Assembly::updateGroundBlocks)
     .def("analyzer", &rigid_block::Assembly::createAnalyzer)
+    .def("analyzerGNN", &rigid_block::Assembly::createAnalyzerGNN)
     .def("self_collision", &rigid_block::Assembly::checkSelfCollision);
 
     nb::class_<rigid_block::Analyzer>(m, "Analyzer")
@@ -47,6 +48,7 @@ NB_MODULE(py_rigidblock, m)
     .def_rw("friction", &rigid_block::Analyzer::friction_mu_)
     .def("fdim", &rigid_block::Analyzer::fdim)
     .def("obj_ceoff", &rigid_block::Analyzer::obj_ceoff, nb::rv_policy::take_ownership)
+    .def("gnn", &rigid_block::Analyzer::computeGNNRep)
     .def("compute", &rigid_block::Analyzer::compute);
 
     nb::class_<rigid_block::Part>(m, "Part")
@@ -57,6 +59,7 @@ NB_MODULE(py_rigidblock, m)
     .def_rw("ind", &rigid_block::Part::partID_)
     .def_static("cuboid", &rigid_block::Part::create_cuboid)
     .def_static("polygon", &rigid_block::Part::create_polygon)
-    .def("centroid", &rigid_block::Part::center)
+    .def("face_center", &rigid_block::Part::center)
+    .def("centroid", &rigid_block::Part::centroid)
     .def("volume", &rigid_block::Part::volume);
 }

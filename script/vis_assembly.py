@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import polyscope as ps
-from AssemblyEnv.geometry import AssemblyChecker, AssemblyGUI
+from AssemblyEnv.geometry import AssemblyChecker, AssemblyGUI, AssemblyCheckerMosek
 import time
 import itertools
 from AssemblyEnv import DATA_DIR

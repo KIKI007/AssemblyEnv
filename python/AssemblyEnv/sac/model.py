@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.distributions import Categorical
+from torch_geometric.nn.models import GAT, EdgeCNN
 
 def initialize_weights_he(m):
     if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
@@ -64,6 +65,22 @@ class QNetwork(BaseNetwork):
             a = self.a_head(states)
             v = self.v_head(states)
             return v + a - a.mean(1, keepdim=True)
+
+class QNetworkGNN(BaseNetwork):
+    def __init__(self, input_channels,
+                 num_actions,
+                 hidden_channels = 64,
+                 dueling_net=False):
+        super().__init__()
+
+        if not dueling_net:
+            self.head = nn.Sequential(
+                nn.Linear(input_channels, hidden_channels),
+                nn.ReLU(inplace=True),
+                nn.Linear(hidden_channels, hidden_channels),
+                nn.ReLU(inplace=True),
+                nn.Linear(hidden_channels, num_actions),
+                nn.Tanh())
 
 
 class TwinnedQNetwork(BaseNetwork):

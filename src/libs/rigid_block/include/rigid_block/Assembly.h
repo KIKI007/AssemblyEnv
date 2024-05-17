@@ -74,6 +74,8 @@ namespace rigid_block
 
         std::unique_ptr<Analyzer> createAnalyzer(const std::vector<ContactFace> &contacts, bool tension);
 
+        std::unique_ptr<Analyzer> createAnalyzerGNN(const std::vector<ContactFace> &contacts, bool tension);
+
         bool checkSelfCollision();
 
     };

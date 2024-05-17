@@ -110,6 +110,8 @@ namespace rigid_block
                 computeFrictionMatrix();
         }
 
+        std::tuple<Eigen::VectorXi, Eigen::VectorXi, Eigen::MatrixXd> computeGNNRep();
+
         void computeEquilibriumMatrix();
 
         void computeFrictionMatrix();

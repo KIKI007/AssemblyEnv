@@ -36,6 +36,41 @@ namespace rigid_block
         }
     }
 
+    std::tuple<Eigen::VectorXi, Eigen::VectorXi, Eigen::MatrixXd> Analyzer::computeGNNRep()
+    {
+        int nC = contact_points_.size();
+        Eigen::VectorXi edge_sta( nC * 2), edge_end(nC * 2);
+        Eigen::MatrixXd edge_attr(nC * 2, 9);
+
+        for (int ic = 0; ic < contact_points_.size(); ic++)
+        {
+            int partIDA = contact_points_[ic].partIDA;
+            int partIDB = contact_points_[ic].partIDB;
+
+            Eigen::Vector3d n = contact_points_[ic].contact_normal;
+            Eigen::Vector3d r = contact_points_[ic].contact_point;
+            Eigen::Vector3d ctA = centroid(partIDA);
+            Eigen::Vector3d ctB = centroid(partIDB);
+
+            Eigen::VectorXd dataAB(9), dataBA(9);
+            dataAB.segment(0, 3) = r - ctA;
+            dataAB.segment(3, 3) = ctB - r;
+            dataAB.segment(6, 3) = n;
+            edge_sta(ic * 2) = partIDA;
+            edge_end(ic * 2) = partIDB;
+            edge_attr.row(ic * 2) = dataAB;
+
+            dataBA.segment(0, 3) = r - ctB;
+            dataBA.segment(3, 3) = ctA - r;
+            dataBA.segment(6, 3) = -n;
+            edge_sta(ic * 2 + 1) = partIDB;
+            edge_end(ic * 2 + 1) = partIDA;
+            edge_attr.row(ic * 2 + 1) = dataBA;
+        }
+
+        return {edge_sta, edge_end, edge_attr};
+    }
+
     void Analyzer::computeEquilibriumMatrix()
     {
         std::vector<Eigen::Triplet<double>> equalibrium_mat_triplets_;

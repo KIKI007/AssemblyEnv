@@ -225,20 +225,26 @@ namespace rigid_block
         maxCoord = center + size;
 
         std::shared_ptr<Part> ground_plane_ = std::make_shared<Part>();
-        ground_plane_->V_ = Eigen::MatrixXd(4, 3);
-        ground_plane_->V_ << minCoord[0], minCoord[1], height,
-                maxCoord[0], minCoord[1], height,
-                maxCoord[0], maxCoord[1], height,
-                minCoord[0], maxCoord[1], height;
+        Eigen::Vector3d plane_center = (minCoord + maxCoord) / 2.0;
+        plane_center[2] = height;
+        Eigen::Vector3d box_center = plane_center - Eigen::Vector3d(0, 0, 0.5);
+        Eigen::Vector3d box_size = size; box_size[2] = 0.5;
+        return Part::create_cuboid(box_center, box_size * 2);
 
-        ground_plane_->F_ = Eigen::MatrixXi(2, 3);
-        ground_plane_->F_ << 0, 1, 2,
-                0, 2, 3;
-        ground_plane_->N_ = Eigen::MatrixXd(4, 3);
-        ground_plane_->N_ << 0, 1, 0,
-                0, 1, 0,
-                0, 1, 0,
-                0, 1, 0;
+        // ground_plane_->V_ = Eigen::MatrixXd(4, 3);
+        // ground_plane_->V_ << minCoord[0], minCoord[1], height,
+        //         maxCoord[0], minCoord[1], height,
+        //         maxCoord[0], maxCoord[1], height,
+        //         minCoord[0], maxCoord[1], height;
+        //
+        // ground_plane_->F_ = Eigen::MatrixXi(2, 3);
+        // ground_plane_->F_ << 0, 1, 2,
+        //         0, 2, 3;
+        // ground_plane_->N_ = Eigen::MatrixXd(4, 3);
+        // ground_plane_->N_ << 0, 1, 0,
+        //         0, 1, 0,
+        //         0, 1, 0,
+        //         0, 1, 0;
 
         return ground_plane_;
     }
@@ -258,6 +264,37 @@ namespace rigid_block
 
         for (int id = 0; id < contacts.size(); id++) {
             analyzer->addContact(contacts[id].partIDA, contacts[id].partIDB, contacts[id].normal, contacts[id].points);
+        }
+
+        analyzer->computeEquilibriumMatrix();
+        analyzer->computeGravity();
+
+        return analyzer;
+    }
+
+    std::unique_ptr<Analyzer> Assembly::createAnalyzerGNN(const std::vector<ContactFace>& contacts, bool tension)
+    {
+        std::unique_ptr<Analyzer> analyzer = std::make_unique<Analyzer>(blocks_.size(), tension);
+        analyzer->updateFrictionCeoff(friction_coeff_);
+
+        std::vector<int> partIDs;
+        double length = computeAvgDiagnalLength();
+
+        for (int ipart = 0; ipart < blocks_.size(); ipart++) {
+            partIDs.push_back(ipart);
+            analyzer->updatePart(ipart, blocks_[ipart]->volume() / pow(length, 3.0) / 16, blocks_[ipart]->centroid());
+        }
+
+        for (int id = 0; id < contacts.size(); id++)
+        {
+            Eigen::Vector3d ct(0, 0 ,0);
+            for(int jd = 0; jd < contacts[id].points.size(); jd++)
+            {
+                ct += contacts[id].points[jd];
+            }
+            if(!contacts[id].points.empty())
+                ct /= contacts[id].points.size();
+            analyzer->addContact(contacts[id].partIDA, contacts[id].partIDB, contacts[id].normal, {ct});
         }
 
         analyzer->computeEquilibriumMatrix();
