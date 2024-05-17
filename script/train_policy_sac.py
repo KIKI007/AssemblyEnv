@@ -7,7 +7,8 @@ def train_1robot(assembly, name = ""):
     env = RobotPlayground(assembly)
     env.render = False
     env.reset()
-    agent = SacdAgent(env, env, f"./logs/{name}", num_steps=1E7, batch_size=512, start_steps=8000, lr =1E-3, use_per=False, target_entropy_ratio = 0.1, gamma=0.90, starting_alpha = 0.5)
+    agent = SacdAgent(env, env, f"./logs/{name}", num_steps=1E7
+                      , batch_size=512, start_steps=8000, lr =1E-3, use_per=False, target_entropy_ratio = 0.1, gamma=0.90, starting_alpha = 0.5)
     agent.run()
 
 if __name__ == "__main__":
