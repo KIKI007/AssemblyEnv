@@ -8,7 +8,7 @@ from AssemblyEnv.sac.model import TwinnedQNetwork, CateoricalPolicy
 from AssemblyEnv.sac.utils import disable_gradients
 
 class SacdAgent(BaseAgent):
-    def __init__(self, env, analyzer, log_dir, num_steps=100000, batch_size=64,
+    def __init__(self, env, log_dir, num_steps=100000, batch_size=64,
                  lr=0.0003, memory_size=1000000, gamma=0.90, multi_step=1,
                  target_entropy_ratio=0.1, start_steps=20000, num_eval_steps = 1000,
                  update_interval=4, target_update_interval=8000,
@@ -20,29 +20,24 @@ class SacdAgent(BaseAgent):
             log_interval, eval_interval, cuda, seed, starting_alpha)
 
         n_part = env.assembly.n_part()
-        [e0, e1, edge_attr] = analyzer.gnn()
-        e0 = torch.tensor(e0, dtype=torch.long, device=self.device)
-        e1 = torch.tensor(e1, dtype=torch.long, device=self.device)
-
-        edge_attr = torch.tensor(edge_attr, dtype=torch.float32, device=self.device)
-        edge_index = torch.vstack([e0, e1])
+        edge_index, batch_edge_index, edge_attr, batch_edge_attr = env.compute_batch_graph(batch_size, self.device)
 
         # Define networks.
         self.policy = CateoricalPolicy().to(self.device)
-        self.policy.set_graph(batch_size, n_part, edge_index, edge_attr)
+        self.policy.set_graph(edge_index, batch_edge_index, edge_attr, batch_edge_attr, n_part)
 
         self.online_critic = TwinnedQNetwork().to(device=self.device)
-        self.online_critic.set_graph(batch_size, n_part, edge_index, edge_attr)
+        self.online_critic.set_graph(edge_index, batch_edge_index, edge_attr, batch_edge_attr, n_part)
 
         self.target_critic = TwinnedQNetwork().to(device=self.device).eval()
-        self.target_critic.set_graph(batch_size, n_part, edge_index, edge_attr)
+        self.target_critic.set_graph(edge_index, batch_edge_index, edge_attr, batch_edge_attr, n_part)
 
         # Copy parameters of the learning network to the target network.
         self.target_critic.load_state_dict(self.online_critic.state_dict())
 
         # Disable gradient calculations of the target network.
         disable_gradients(self.target_critic)
-
+        print(self.policy.parameters())
         self.policy_optim = Adam(self.policy.parameters(), lr=lr)
         self.q1_optim = Adam(self.online_critic.Q1.parameters(), lr=lr)
         self.q2_optim = Adam(self.online_critic.Q2.parameters(), lr=lr)

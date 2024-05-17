@@ -12,22 +12,28 @@ from AssemblyEnv import DATA_DIR
 import torch
 
 def test(queue):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     parts = queue.get()
-    assembly = AssemblyCheckerMosek()
-    assembly.load_from_file(DATA_DIR + "/block/dome.obj")
-    n = assembly.n_part() - 1
+    assembly = AssemblyCheckerMosek(parts)
+    #assembly.load_from_file(DATA_DIR + "/block/dome.obj")
+
     env = RobotPlayground(assembly)
-    #env = RobotPlayground(assembly)
+
     env.render = True
     env.send_time_delay = 0.2
-    model = CateoricalPolicy(2 * n, n * 2)
-    model.load(f"{DATA_DIR}/../script/logs/dome_held/model/best/policy.pth")
+
+    model = CateoricalPolicy()
+    model.load(f"{DATA_DIR}/../logs/arch/model/best/policy.pth", device)
+    n_part = env.assembly.n_part()
+    edge_index, batch_edge_index, edge_attr, batch_edge_attr = env.compute_batch_graph(1, device)
+    model.set_graph(edge_index, batch_edge_index, edge_attr, batch_edge_attr, n_part)
+    model = model.to(device)
 
     obs, info = env.reset()
     env.send()
     while True:
-        state = torch.tensor(obs, device="cpu", dtype=torch.float)
-        state = state.reshape(-1, n * 2)
+        state = torch.tensor(obs, device=device, dtype=torch.float)
+        state = state.reshape(-1, n_part * 2)
         #action, action_probs, log_action_probs = model.sample(state)
         action = model.act(state)
         obs, reward, terminated, truncated, info = env.step(action)
@@ -46,7 +52,7 @@ def gui(queue):
     global viewer
     parts = queue.get()
     viewer = AssemblyGUI(parts)
-    viewer.load_from_file(DATA_DIR + "/block/dome.obj")
+    #viewer.load_from_file(DATA_DIR + "/block/dome.obj")
 
     ps.init()
     ps.set_navigation_style("turntable")

@@ -10,6 +10,7 @@ from compas_eve import Publisher
 from compas_eve import Topic
 from compas_eve.mqtt import MqttTransport
 import time
+import torch
 
 class RobotPlayground(gym.Env):
 	def __init__(self, assembly):
@@ -96,6 +97,29 @@ class RobotPlayground(gym.Env):
 		info = self._get_info()
 		self.send()
 		return observation, info
+
+	def compute_batch_graph(self, batch_size, device):
+
+		assembly = self.assembly.assembly
+		n_part = assembly.n_part()
+		partList = [x for x in range(assembly.n_part())]
+		contacts = assembly.contacts(partList, 1.0)
+		analyzer = assembly.analyzerGNN(contacts, False)
+		[e0, e1, edge_attr] = analyzer.gnn()
+		edge_attr = edge_attr[:, 6: 9]
+
+		e0 = torch.tensor(e0, dtype=torch.long, device=device)
+		e1 = torch.tensor(e1, dtype=torch.long, device=device)
+		edge_attr = torch.tensor(edge_attr, dtype=torch.float32, device=device)
+		edge_index = torch.vstack([e0, e1])
+
+		n_edge = edge_index.shape[1]
+		batch_edge_attr = edge_attr.repeat(batch_size, 1)
+		batch_edge_index = edge_index.repeat(1, batch_size)
+		for i in range(batch_size):
+			batch_edge_index[:, n_edge * i: n_edge * (i + 1)] += torch.ones((2, n_edge), device=device,
+																			dtype=torch.long) * n_part * i
+		return edge_index, batch_edge_index, edge_attr, batch_edge_attr
 
 	def reset(self, seed=None, options=None):
 		# We need the following line to seed self.np_random
