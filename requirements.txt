@@ -1,7 +1,5 @@
-polyscope == 2.1.0
-gymnasium == 0.29.1
 cvxpy
-compas_eve
-stable_baselines3
 tensorboard
 gurobipy
+Mosek
+scikit-sparse
