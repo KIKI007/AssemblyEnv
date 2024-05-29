@@ -61,5 +61,6 @@ NB_MODULE(py_rigidblock, m)
     .def_static("polygon", &rigid_block::Part::create_polygon)
     .def("face_center", &rigid_block::Part::center)
     .def("centroid", &rigid_block::Part::centroid)
-    .def("volume", &rigid_block::Part::volume);
+    .def("volume", &rigid_block::Part::volume)
+    .def("ee", &rigid_block::Part::eeAnchor);
 }

@@ -64,6 +64,8 @@ namespace rigid_block {
                 return Eigen::Vector3d(1, 1, 1);
             }
         }
+
+        std::vector<Eigen::Matrix4d> eeAnchor(double face_area_lb = 0.01);
     };
 }
 

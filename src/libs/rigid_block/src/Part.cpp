@@ -299,5 +299,89 @@ namespace rigid_block {
         }
         return (maxCoord - minCoord).norm() / 2;
     }
+
+    std::vector<Eigen::Matrix4d> Part::eeAnchor(double face_area_lb)
+    {
+        std::vector<Eigen::Vector3d> points;
+        std::vector<Eigen::Vector3d> normals;
+
+        std::vector<Eigen::Matrix4d> ts;
+        std::vector<double> areas;
+
+        for(int id = 0; id < F_.rows(); id++)
+        {
+            Eigen::Vector3d p0 = V_.row(F_(id, 0));
+            Eigen::Vector3d p1 = V_.row(F_(id, 1));
+            Eigen::Vector3d p2 = V_.row(F_(id, 2));
+            Eigen::Vector3d n = -(p1 - p0).cross(p2 - p0); n.normalize();
+            points.push_back(p0); normals.push_back(n);
+            points.push_back(p1); normals.push_back(n);
+            points.push_back(p2); normals.push_back(n);
+        }
+
+        ConvexCluster cluster;
+        std::vector<std::vector<Eigen::Vector3d>> hull_points;
+        std::vector<Eigen::Vector3d> hull_normals;
+        cluster.computeConvexHull(points, normals, hull_points, hull_normals);
+
+        struct ee_result {
+            Eigen::Matrix4d t;
+            double area = 0;
+        };
+
+        std::vector<ee_result> list;
+
+        for(int id = 0; id < hull_points.size(); id++)
+        {
+            const std::vector<Eigen::Vector3d> &pts = hull_points[id];
+
+            ee_result item;
+
+            if(pts.size() <= 2) continue;
+
+            //center
+            Eigen::Vector3d xyz(0, 0, 0);
+            xyz.setZero();
+            for(auto &pt:pts) xyz+= pt;
+            xyz /= (double) pts.size();
+
+            //normal
+            Eigen::Vector3d n = -(pts[1] - pts[0]).cross(pts[2] - pts[0]);
+
+            //frame
+            Eigen::Vector3d yaxis = Eigen::Vector3d(1, 0, 0).cross(n);
+            if(yaxis.norm() < 1E-6) yaxis = Eigen::Vector3d(0, 1, 0).cross(n);
+            yaxis.normalize();
+            Eigen::Vector3d xaxis = yaxis.cross(n); xaxis.normalize();
+            Eigen::Matrix3d rot; rot.setZero();
+            rot.col(0) = n;
+            rot.col(1) = xaxis;
+            rot.col(2) = yaxis;
+
+            item.t.setIdentity();
+            item.t.block(0, 0, 3, 3) = rot;
+            item.t.block(0, 3, 3, 1) = xyz;
+
+            //area
+            item.area = 0;
+            for(int id = 0; id < (int)pts.size() - 2; id++) {
+                Eigen::Vector3d p0 = pts[0];
+                Eigen::Vector3d p1 = pts[id + 1];
+                Eigen::Vector3d p2 = pts[id + 2];
+                item.area += (p1 - p0).cross(p2 - p0).norm() / 2;
+            }
+
+            if(item.area >= face_area_lb)
+                list.push_back(item);
+        }
+        std::sort(list.begin(), list.end(), [](auto &a, auto &b) {
+            return a.area > b.area;
+        });
+        std::vector<Eigen::Matrix4d> ee_transforms;
+        for(auto &item: list)
+            ee_transforms.push_back(item.t);
+        return ee_transforms;
+    }
+
 }
 
