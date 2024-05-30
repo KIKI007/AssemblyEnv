@@ -31,6 +31,8 @@ namespace rigid_block {
 
         static std::shared_ptr<Part> create_polygon(const Eigen::MatrixXd &points, double depth);
 
+        static std::shared_ptr<Part> create_mesh(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
+
         static void create_triangles(
             const Eigen::MatrixXd &points,
             Eigen::MatrixXd &V,

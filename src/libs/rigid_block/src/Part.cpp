@@ -73,6 +73,17 @@ namespace rigid_block {
         return part;
     }
 
+    std::shared_ptr<Part> Part::create_mesh(const Eigen::MatrixXd &V,
+        const Eigen::MatrixXi &F)
+    {
+        std::shared_ptr<Part> part = std::make_shared<Part>();
+        part->V_ = V;
+        part->F_ = F;
+        part->partID_ = -1;
+        part->ground_ = false;
+        return part;
+    }
+
     void Part::create_triangles(const Eigen::MatrixXd& points, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXi& E, std::string option)
     {
         //boundary represented by points can be non-convex
@@ -354,9 +365,9 @@ namespace rigid_block {
             yaxis.normalize();
             Eigen::Vector3d xaxis = yaxis.cross(n); xaxis.normalize();
             Eigen::Matrix3d rot; rot.setZero();
-            rot.col(0) = n;
-            rot.col(1) = xaxis;
-            rot.col(2) = yaxis;
+            rot.col(0) = xaxis;
+            rot.col(1) = yaxis;
+            rot.col(2) = n.normalized();
 
             item.t.setIdentity();
             item.t.block(0, 0, 3, 3) = rot;
