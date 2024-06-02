@@ -49,7 +49,8 @@ NB_MODULE(py_rigidblock, m)
     .def("fdim", &rigid_block::Analyzer::fdim)
     .def("obj_ceoff", &rigid_block::Analyzer::obj_ceoff, nb::rv_policy::take_ownership)
     .def("gnn", &rigid_block::Analyzer::computeGNNRep)
-    .def("compute", &rigid_block::Analyzer::compute);
+    .def("compute", &rigid_block::Analyzer::compute)
+    .def("sample", &rigid_block::Analyzer::sample_disassembly_directions);
 
     nb::class_<rigid_block::Part>(m, "Part")
     .def(nb::init<>())

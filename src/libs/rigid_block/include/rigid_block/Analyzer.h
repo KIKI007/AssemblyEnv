@@ -55,6 +55,8 @@ namespace rigid_block
 
         Eigen::VectorXd equalibrium_gravity_;
 
+        std::vector<std::vector<std::tuple<int, Eigen::Vector3d>>> contact_normals_;
+
     public:
 
         const double inf = 1E8;
@@ -65,6 +67,7 @@ namespace rigid_block
         {
             mass_.resize(nParts, 0.0);
             centroid_.resize(nParts, Eigen::Vector3d::Zero());
+            contact_normals_.resize(nParts);
         }
 
         Analyzer(const Analyzer &analyzer)
@@ -74,6 +77,8 @@ namespace rigid_block
             centroid_ = analyzer.centroid_;
             contact_points_ = analyzer.contact_points_;
             with_tension_ = analyzer.with_tension_;
+            contact_normals_ = analyzer.contact_normals_;
+
         }
 
         //Get Basic Properties
@@ -140,6 +145,8 @@ namespace rigid_block
 
         std::tuple<std::vector<int>, std::vector<double>> var_lobnd(const std::vector<int> &status);
         std::tuple<std::vector<int>, std::vector<double>> var_upbnd(const std::vector<int> &status);
+
+        Eigen::Vector3d sample_disassembly_directions(int partID, const std::vector<int> &status);
 
     };
 }

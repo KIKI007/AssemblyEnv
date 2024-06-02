@@ -4,7 +4,7 @@
 
 #include "rigid_block/Analyzer.h"
 #include <iostream>
-
+#include <random>
 namespace rigid_block
 {
     void Analyzer::addContact(int partIDA,
@@ -25,6 +25,9 @@ namespace rigid_block
             contact_point.partIDB = partIDB;
             contact_points_.push_back(contact_point);
         }
+
+        contact_normals_[partIDA].push_back({partIDB, normal});
+        contact_normals_[partIDB].push_back({partIDA, -normal});
     }
 
     void Analyzer::updatePart(int partID, double mass, Eigen::Vector3d ct)
@@ -277,6 +280,57 @@ namespace rigid_block
         }
 
         return {vind, upbnd};
+    }
+
+    Eigen::Vector3d Analyzer::sample_disassembly_directions(int partID, const std::vector<int> &status) {
+        std::vector<Eigen::Vector3d> normals;
+
+        for(int id = 0; id < contact_normals_[partID].size(); id++) {
+            auto [partIDB, n] = contact_normals_[partID][id];
+            if (status[partIDB] > 0) {
+                normals.push_back(-n);
+                //std::cout << (-n).transpose() << std::endl;
+            }
+        }
+
+        // Number of samples
+        int numSamples = 1E4;
+
+        // Generate random points inside the unit sphere
+        std::random_device rd;
+        std::mt19937 rng(rd());
+
+        double max_value = 0;
+        Eigen::Vector3d max_vec(0, 0,1);
+
+        if (normals.empty()) {
+            return max_vec;
+        }
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            std::uniform_real_distribution<double> dist(-1.0, 1.0);
+            Eigen::Vector3d point;
+            while (true)
+            {
+                point = Eigen::Vector3d(dist(rng), dist(rng), dist(rng));
+                if (point.norm() <= 1.0)
+                {
+                    point = point / point.norm();
+                    double product = 1E8;
+                    for(auto &n : normals) {
+                        product = std::min(product, n.dot(point));
+                    }
+                    //std::cout << point.transpose() << ", " << product << std::endl;
+                    if(product > max_value) {
+                        max_vec = point;
+                        max_value = product;
+                    }
+                    break;
+                }
+            }
+        }
+        return max_vec;
     }
 
     void Analyzer::computeFrictionDir(const Eigen::Vector3d& n, Eigen::Vector3d& t1, Eigen::Vector3d& t2)
