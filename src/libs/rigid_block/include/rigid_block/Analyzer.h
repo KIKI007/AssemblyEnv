@@ -146,7 +146,7 @@ namespace rigid_block
         std::tuple<std::vector<int>, std::vector<double>> var_lobnd(const std::vector<int> &status);
         std::tuple<std::vector<int>, std::vector<double>> var_upbnd(const std::vector<int> &status);
 
-        Eigen::Vector3d sample_disassembly_directions(int partID, const std::vector<int> &status);
+        Eigen::MatrixXd sample_disassembly_directions(int partID, const std::vector<int> &status, int num_sample);
 
     };
 }

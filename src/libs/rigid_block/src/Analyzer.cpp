@@ -282,9 +282,9 @@ namespace rigid_block
         return {vind, upbnd};
     }
 
-    Eigen::Vector3d Analyzer::sample_disassembly_directions(int partID, const std::vector<int> &status) {
-        std::vector<Eigen::Vector3d> normals;
+    Eigen::MatrixXd Analyzer::sample_disassembly_directions(int partID, const std::vector<int> &status, int numSamples) {
 
+        std::vector<Eigen::Vector3d> normals;
         for(int id = 0; id < contact_normals_[partID].size(); id++) {
             auto [partIDB, n] = contact_normals_[partID][id];
             if (status[partIDB] > 0) {
@@ -293,44 +293,58 @@ namespace rigid_block
             }
         }
 
-        // Number of samples
-        int numSamples = 1E4;
-
         // Generate random points inside the unit sphere
         std::random_device rd;
         std::mt19937 rng(rd());
 
-        double max_value = 0;
-        Eigen::Vector3d max_vec(0, 0,1);
+        std::vector<Eigen::Vector3d> cand_drts, drts;
+        std::uniform_real_distribution<double> dist(-1.0, 1.0);
 
-        if (normals.empty()) {
-            return max_vec;
+        for (int i = 0; i < numSamples; ++i) {
+            Eigen::Vector3d drt;
+            drt = Eigen::Vector3d(dist(rng), dist(rng), dist(rng));
+            if(drt.norm() > 1E-6) {
+                drt = drt / drt.norm();
+                cand_drts.push_back(drt);
+            }
         }
 
-        for (int i = 0; i < numSamples; ++i)
+        int N = 32;
+        for(auto normal : normals) {
+            Eigen::Vector3d xaxis = Eigen::Vector3d(0, 0, 1).cross(normal);
+            if(xaxis.norm() < 1E-6) {
+                xaxis = Eigen::Vector3d(1, 0, 0).cross(normal);
+            }
+            xaxis /= xaxis.norm();
+            Eigen::Vector3d yaxis = normal.cross(xaxis);
+            yaxis /= yaxis.norm();
+            for(int j = 0; j < N; j++) {
+                double angle = M_PI * 2 / N * (double)j;
+                Eigen::Vector3d drt = xaxis * cos(angle) + yaxis * sin(angle);
+                cand_drts.push_back(drt);
+            }
+        }
+
+        for(auto drt : cand_drts)
         {
-            std::uniform_real_distribution<double> dist(-1.0, 1.0);
-            Eigen::Vector3d point;
-            while (true)
-            {
-                point = Eigen::Vector3d(dist(rng), dist(rng), dist(rng));
-                if (point.norm() <= 1.0)
-                {
-                    point = point / point.norm();
-                    double product = 1E8;
-                    for(auto &n : normals) {
-                        product = std::min(product, n.dot(point));
-                    }
-                    //std::cout << point.transpose() << ", " << product << std::endl;
-                    if(product > max_value) {
-                        max_vec = point;
-                        max_value = product;
-                    }
+            bool valid = true;
+            for(auto &n : normals) {
+                if(drt.dot(n) < -1E-6) {
+                    valid = false;
                     break;
                 }
             }
+            if(valid) {
+                drts.push_back(drt);
+            }
         }
-        return max_vec;
+
+        Eigen::MatrixXd result = Eigen::MatrixXd(drts.size(), 3);
+        for(int id = 0; id < drts.size(); id++) {
+            result.row(id) = drts[id];
+        }
+        return result;
+
     }
 
     void Analyzer::computeFrictionDir(const Eigen::Vector3d& n, Eigen::Vector3d& t1, Eigen::Vector3d& t2)
