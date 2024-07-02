@@ -43,7 +43,7 @@ namespace rigid_block
     {
         int nC = contact_points_.size();
         Eigen::VectorXi edge_sta( nC * 2), edge_end(nC * 2);
-        Eigen::MatrixXd edge_attr(nC * 2, 9);
+        Eigen::MatrixXd edge_attr(nC * 2, 6);
 
         for (int ic = 0; ic < contact_points_.size(); ic++)
         {
@@ -55,17 +55,15 @@ namespace rigid_block
             Eigen::Vector3d ctA = centroid(partIDA);
             Eigen::Vector3d ctB = centroid(partIDB);
 
-            Eigen::VectorXd dataAB(9), dataBA(9);
-            dataAB.segment(0, 3) = r - ctA;
-            dataAB.segment(3, 3) = ctB - r;
-            dataAB.segment(6, 3) = n;
+            Eigen::VectorXd dataAB(6), dataBA(6);
+            dataAB.segment(0, 3) = ctB - r;
+            dataAB.segment(3, 3) = n;
             edge_sta(ic * 2) = partIDA;
             edge_end(ic * 2) = partIDB;
             edge_attr.row(ic * 2) = dataAB;
 
-            dataBA.segment(0, 3) = r - ctB;
-            dataBA.segment(3, 3) = ctA - r;
-            dataBA.segment(6, 3) = -n;
+            dataBA.segment(0, 3) = ctA - r;
+            dataBA.segment(3, 3) = -n;
             edge_sta(ic * 2 + 1) = partIDB;
             edge_end(ic * 2 + 1) = partIDA;
             edge_attr.row(ic * 2 + 1) = dataBA;
