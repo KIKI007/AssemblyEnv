@@ -7,7 +7,8 @@
 #include "Eigen/Dense"
 #include <memory>
 #include <vector>
-namespace rigid_block {
+namespace rigid_block
+{
     class Part {
     public:
 
@@ -27,11 +28,11 @@ namespace rigid_block {
 
     public:
 
-        static std::shared_ptr<Part> create_cuboid(Eigen::Vector3d center, Eigen::Vector3d dimension);
+        static std::unique_ptr<Part> create_cuboid(Eigen::Vector3d center, Eigen::Vector3d dimension);
 
-        static std::shared_ptr<Part> create_polygon(const Eigen::MatrixXd &points, double depth);
+        static std::unique_ptr<Part> create_polygon(const Eigen::MatrixXd &points, double depth);
 
-        static std::shared_ptr<Part> create_mesh(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
+        static std::unique_ptr<Part> create_mesh(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
 
         static void create_triangles(
             const Eigen::MatrixXd &points,
@@ -40,6 +41,18 @@ namespace rigid_block {
             Eigen::MatrixXi &E,
             std::string option = "a");
 
+    public:
+        Part() {
+
+        }
+
+        Part(const Part &part) {
+            V_ = part.V_;
+            F_ = part.F_;
+            N_ = part.N_;
+            partID_ = part.partID_;
+            ground_ = part.ground_;
+        }
     public:
 
         double volume();

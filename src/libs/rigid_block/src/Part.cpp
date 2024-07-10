@@ -14,7 +14,7 @@
 #include <iostream>
 namespace rigid_block {
 
-    std::shared_ptr<Part> Part::create_polygon(const Eigen::MatrixXd& points, double depth)
+    std::unique_ptr<Part> Part::create_polygon(const Eigen::MatrixXd& points, double depth)
     {
         Eigen::MatrixXd V;
         Eigen::MatrixXi F, E;
@@ -64,7 +64,7 @@ namespace rigid_block {
             faces.row(id * 2 + F.rows() * 2 + 1) = Eigen::RowVector3i(b, d, c);
         }
 
-        std::shared_ptr<Part> part = std::make_shared<Part>();
+        std::unique_ptr<Part> part = std::make_unique<Part>();
         part->V_ = vertices;
         part->F_ = faces;
         part->partID_ = -1;
@@ -73,10 +73,10 @@ namespace rigid_block {
         return part;
     }
 
-    std::shared_ptr<Part> Part::create_mesh(const Eigen::MatrixXd &V,
+    std::unique_ptr<Part> Part::create_mesh(const Eigen::MatrixXd &V,
         const Eigen::MatrixXi &F)
     {
-        std::shared_ptr<Part> part = std::make_shared<Part>();
+        std::unique_ptr<Part> part = std::make_unique<Part>();
         part->V_ = V;
         part->F_ = F;
         part->partID_ = -1;
@@ -163,7 +163,7 @@ namespace rigid_block {
         free(out.pointmarkerlist);
     }
 
-    std::shared_ptr<Part> Part::create_cuboid(Eigen::Vector3d center, Eigen::Vector3d dimensions) {
+    std::unique_ptr<Part> Part::create_cuboid(Eigen::Vector3d center, Eigen::Vector3d dimensions) {
         Eigen::MatrixXd vertices(8, 3); // 8 vertices, 3 coordinates each
 
         double halfX = dimensions.x() / 2.0f;
@@ -197,7 +197,7 @@ namespace rigid_block {
                  1, 6, 2;
         for(int ir = 0; ir < faces.rows(); ir++) std::swap(faces(ir, 1), faces(ir, 2));
 
-        std::shared_ptr<Part> part = std::make_shared<Part>();
+        std::unique_ptr<Part> part = std::make_unique<Part>();
         part->V_ = vertices;
         part->F_ = faces;
         part->partID_ = -1;

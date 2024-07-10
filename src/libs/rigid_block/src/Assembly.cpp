@@ -172,35 +172,46 @@ namespace rigid_block
         }
     }
 
-    std::shared_ptr<Part> Assembly::getPart(int partID) {
+    std::unique_ptr<Part> Assembly::getPart(int partID)
+    {
         if(partID >= 0 && partID < blocks_.size()) {
-            return blocks_[partID];
+            std::unique_ptr<Part> new_part = std::make_unique<Part>(*blocks_[partID]);
+            return new_part;
         }
         return nullptr;
     }
 
-    void Assembly::updateGroundBlocks(std::shared_ptr<Part> ground_plane, const std::string &option)
+    void Assembly::updateGroundBlocks(
+        std::unique_ptr<Part> ground_plane,
+        const std::string &option)
     {
         for(auto &block: blocks_) block->ground_ = false;
+        std::shared_ptr<Part> new_ground = std::make_shared<Part>(*ground_plane);
 
         if(option == "fix") {
             for (int id = 0; id < blocks_.size(); id++) {
                 std::shared_ptr<Part> block = blocks_[id];
                 std::vector<ContactFace> contacts;
-                contacts = computeContacts(block, ground_plane);
+                contacts = computeContacts(block, new_ground);
                 if (!contacts.empty()) {
                     block->ground_ = true;
                 }
             }
         }
         else if(option == "add"){
-            blocks_.push_back(ground_plane);
-            ground_plane->partID_ = (int) blocks_.size() - 1;
-            ground_plane->ground_ = true;
+            blocks_.push_back(new_ground);
+            new_ground->partID_ = (int) blocks_.size() - 1;
+            new_ground->ground_ = true;
         }
     }
 
-    std::shared_ptr<Part> Assembly::computeGroundPlane()
+    void Assembly::addPart(std::unique_ptr<Part> part) {
+        std::shared_ptr<Part> new_part = std::make_shared<Part>(*part);
+        new_part->partID_ = blocks_.size();
+        blocks_.push_back(new_part);
+    }
+
+    std::unique_ptr<Part> Assembly::computeGroundPlane()
     {
         Eigen::Vector3d minCoord, maxCoord;
         for (int id = 0; id < blocks_.size(); id++)
@@ -224,7 +235,7 @@ namespace rigid_block
         minCoord = center - size;
         maxCoord = center + size;
 
-        std::shared_ptr<Part> ground_plane_ = std::make_shared<Part>();
+        //std::unique_ptr<Part> ground_plane_ = std::unique_ptr<Part>();
         Eigen::Vector3d plane_center = (minCoord + maxCoord) / 2.0;
         plane_center[2] = height;
         Eigen::Vector3d box_center = plane_center - Eigen::Vector3d(0, 0, 0.5);
@@ -245,8 +256,7 @@ namespace rigid_block
         //         0, 1, 0,
         //         0, 1, 0,
         //         0, 1, 0;
-
-        return ground_plane_;
+        //return ground_plane_;
     }
 
     std::unique_ptr<Analyzer> Assembly::createAnalyzer(const std::vector<ContactFace> &contacts, bool tension)

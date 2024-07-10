@@ -60,17 +60,19 @@ namespace rigid_block
         //nanobind
     public:
 
-        void loadFromFile(const std::string &filename);
+        void addPart(std::unique_ptr<Part> part);
 
-        std::shared_ptr<Part> getPart(int partID);
+        std::unique_ptr<Part> getPart(int partID);
+
+    public:
+
+        void loadFromFile(const std::string &filename);
 
         std::vector<ContactFace> computeContacts(const std::vector<int> &subPartIDs, double scale = 1.0);
 
-        std::shared_ptr<Part> computeGroundPlane();
+        std::unique_ptr<Part> computeGroundPlane();
 
-        void updateGroundBlocks(std::shared_ptr<Part> ground_plane, const std::string &option);
-
-        void addPart(std::shared_ptr<Part> part){part->partID_ = blocks_.size(); blocks_.push_back(part);}
+        void updateGroundBlocks(std::unique_ptr<Part> ground_plane, const std::string &option);
 
         std::unique_ptr<Analyzer> createAnalyzer(const std::vector<ContactFace> &contacts, bool tension);
 

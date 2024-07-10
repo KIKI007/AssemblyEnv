@@ -3,8 +3,9 @@
 //
 
 #include "rigid_block/Part.h"
+#include "rigid_block/Assembly.h"
 #include <iostream>
 int main(){
-    Eigen::MatrixXd points(8, 2);
-    rigid_block::Part::create_polygon(points, 10);
+    rigid_block::Assembly assembly;
+    assembly.loadFromFile("/home/ziqwang/Documents/GitHub/RobotEnv/docker/AssemblyEnv/src/apps/debug/halfdome2.obj");
 }

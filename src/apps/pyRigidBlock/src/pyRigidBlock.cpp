@@ -13,6 +13,8 @@ namespace nb = nanobind;
 
 NB_MODULE(py_rigidblock, m)
 {
+    //nb::set_leak_warnings(false);
+
     nb::class_<rigid_block::ContactFace>(m, "ContactFace")
         .def(nb::init<>())
         .def_rw("part0", &rigid_block::ContactFace::partIDA)
