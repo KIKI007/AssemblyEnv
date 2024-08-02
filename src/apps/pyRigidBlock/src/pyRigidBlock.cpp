@@ -6,6 +6,7 @@
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/eigen/sparse.h>
 #include <nanobind/stl/vector.h>
+#include <rigid_block/MCTS.h>
 
 #include <iostream>
 namespace nb = nanobind;
@@ -67,4 +68,28 @@ NB_MODULE(py_rigidblock, m)
     .def("centroid", &rigid_block::Part::centroid)
     .def("volume", &rigid_block::Part::volume)
     .def("ee", &rigid_block::Part::eeAnchor);
+    nb::class_<rigid_block::MCTSNode>(m, "MCTSNode")
+    .def(nb::init<bool, double, double, const std::vector<int> &, const std::vector<double> &, const std::vector<double> &, const std::vector<bool> &>())
+    .def_rw("Qsa", &rigid_block::MCTSNode::q_value_)
+    .def_rw("Psa", &rigid_block::MCTSNode::prior_)
+    .def_rw("Nsa", &rigid_block::MCTSNode::n_visit_)
+    .def_rw("Ns", &rigid_block::MCTSNode::tot_visit_)
+    .def_rw("Vs", &rigid_block::MCTSNode::valid_action_)
+    .def_rw("v", &rigid_block::MCTSNode::reward_)
+    .def_rw("state", &rigid_block::MCTSNode::state_)
+    .def_rw("noise", &rigid_block::MCTSNode::noise_)
+    .def_rw("reward", &rigid_block::MCTSNode::reward_)
+    .def_rw("terminated", &rigid_block::MCTSNode::terminated_)
+    .def_rw("cpuct", &rigid_block::MCTSNode::cpuct_)
+    .def("child", &rigid_block::MCTSNode::get_child);
+
+    nb::class_<rigid_block::MCTS>(m, "MCTS")
+    .def(nb::init<int>())
+    .def_rw("root", &rigid_block::MCTS::root_)
+    .def("leaf", &rigid_block::MCTS::leaf)
+    .def("leaf_act", &rigid_block::MCTS::leaf_act)
+    .def("set_root", &rigid_block::MCTS::set_root)
+    .def("find_leaf", &rigid_block::MCTS::find_leaf)
+    .def("expand_leaf", &rigid_block::MCTS::expand_leaf)
+    .def("execute", &rigid_block::MCTS::execute);
 }
