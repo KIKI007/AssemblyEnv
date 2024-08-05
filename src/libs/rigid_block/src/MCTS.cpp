@@ -9,6 +9,7 @@ rigid_block::MCTSNode::MCTSNode(
     bool terminated,
     double reward,
     const std::vector<int> &state,
+    const std::vector<std::vector<int>> &child_states,
     const std::vector<double> &prior,
     const std::vector<double> &noise,
     const std::vector<bool> &valid)
@@ -18,6 +19,7 @@ rigid_block::MCTSNode::MCTSNode(
     reward_ = reward;
 
     state_ = state;
+    child_states_ = child_states;
     prior_ = prior;
     noise_ = noise;
     valid_action_ = valid;
@@ -40,6 +42,7 @@ rigid_block::MCTSNode::MCTSNode(const MCTSNode &node) {
     terminated_ = node.terminated_;
     reward_ = node.reward_;
     state_ = node.state_;
+    child_states_ = node.child_states_;
     prior_ = node.prior_;
     noise_ = node.noise_;
     valid_action_ = node.valid_action_;
@@ -226,15 +229,34 @@ std::shared_ptr<rigid_block::MCTSNode> rigid_block::MCTS::create_node(
     bool terminate,
     double reward,
     const std::vector<int> &state,
+    const std::vector<std::vector<int>> &child_states,
     const std::vector<double> &prior,
     const std::vector<double> &noise,
     const std::vector<bool> &valid) const
 {
     std::shared_ptr<MCTSNode> node
-    = std::make_shared<MCTSNode>(node_id, terminate, reward, state, prior, noise, valid);
+    = std::make_shared<MCTSNode>(node_id, terminate, reward, state, child_states, prior, noise, valid);
     node->update_prior();
     node->cpuct_ = cpuct_;
     return node;
+}
+
+std::shared_ptr<rigid_block::MCTSNode> rigid_block::MCTS::child_node(std::shared_ptr<rigid_block::MCTSNode> node, int action_id) {
+    if(node->children_[action_id] != nullptr) {
+        return node->children_[action_id];
+    }
+
+    auto child_state = node->child_states_[action_id];
+    if(child_state.empty()) {
+        return nullptr;
+    }
+
+    auto find_it = mapping_.find(child_state);
+    if(find_it != mapping_.end()) {
+        node->children_[action_id] = find_it->second;
+        return find_it->second;
+    }
+    return nullptr;
 }
 
 bool rigid_block::MCTS::find_leaf(std::shared_ptr<MCTSNode> node) {
@@ -249,7 +271,7 @@ bool rigid_block::MCTS::find_leaf(std::shared_ptr<MCTSNode> node) {
         } else {
             int act = node->best_action();
             current_path_action_.push_back(act);
-            node = node->children_[act];
+            node = child_node(node, act);
         }
     }
     return true;
@@ -258,6 +280,7 @@ bool rigid_block::MCTS::find_leaf(std::shared_ptr<MCTSNode> node) {
 void rigid_block::MCTS::expand(std::shared_ptr<MCTSNode> node) {
     path_endNode()->add_child(path_endAction(), node);
     current_path_.push_back(node);
+    mapping_[node->state_] = node;
 }
 
 void rigid_block::MCTS::backup(double v)

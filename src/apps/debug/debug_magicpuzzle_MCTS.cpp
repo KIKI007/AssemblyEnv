@@ -17,14 +17,22 @@ int node_ind = 0;
 std::vector<int> init_board(int dim){
     std::vector<int> board;
     board.resize(dim * dim, -1);
-    board[0] = 7;
+    board[0] = 0;
     // board[1] = 0;
     // board[2] = 5;
     // board[3] = 2;
     return board;
 }
 
-std::vector<bool> valid_move(const std::vector<int> &board) {
+std::vector<int> step(const std::vector<int> &board, int action_id) {
+    int pos = action_id / board.size();
+    int num = action_id % board.size();
+    std::vector<int> new_board = board;
+    new_board[pos] = num;
+    return new_board;
+}
+
+std::tuple<std::vector<bool>, std::vector<std::vector<int>>> valid_move(const std::vector<int> &board) {
     int dim = std::sqrt(board.size());
     std::vector<bool> valid_actions(board.size() * board.size());
     valid_actions.resize(board.size() * board.size(), true);
@@ -39,14 +47,24 @@ std::vector<bool> valid_move(const std::vector<int> &board) {
     }
 
     //remove pos that has been taken
-    for(int pos = 0; pos < board.size(); pos++) {
+    std::vector<std::vector<int>> child_states;
+    for(int pos = 0; pos < board.size(); pos++)
+    {
         bool pos_valid = (board[pos] == -1);
-        for(int number = 0; number < board.size(); number++) {
+        for(int number = 0; number < board.size(); number++)
+        {
             int ind = pos * board.size() + number;
             valid_actions[ind] = pos_valid * (1 - number_exist[number]);
+            if(valid_actions[ind]) {
+                auto child_state = step(board, ind);
+                child_states.push_back(child_state);
+            }
+            else {
+                child_states.push_back({});
+            }
         }
     }
-    return valid_actions;
+    return {valid_actions, child_states};
 }
 
 Eigen::MatrixXi matrix_board(const std::vector<int> &board) {
@@ -153,14 +171,6 @@ std::tuple<bool, double> end_game(const std::vector<int> &board) {
 }
 
 
-std::vector<int> step(const std::vector<int> &board, int action_id) {
-    int pos = action_id / board.size();
-    int num = action_id % board.size();
-    std::vector<int> new_board = board;
-    new_board[pos] = num;
-    return new_board;
-}
-
 std::shared_ptr<MCTSNode> create_node(std::shared_ptr<MCTS> tree, const std::vector<int> &board)
 {
     int n_action = board.size() * board.size();
@@ -169,16 +179,16 @@ std::shared_ptr<MCTSNode> create_node(std::shared_ptr<MCTS> tree, const std::vec
     std::vector<double> noise;
     noise.resize(n_action, 0);
 
-    std::vector<bool> valid = valid_move(board);
+    auto [valid, child_states] = valid_move(board);
     auto [terminated, reward] = end_game(board);
 
-    return tree->create_node(node_ind ++, terminated, reward, board, prior, noise, valid);
+    return tree->create_node(node_ind ++, terminated, reward, board, child_states, prior, noise, valid);
 }
 
 
 int main()
 {
-    int dim = 3;
+    int dim = 2;
     int n_action = dim * dim * dim * dim;
     std::shared_ptr<MCTS> tree = std::make_shared<MCTS>(n_action, 1.0);
     std::vector<int> board = init_board(dim);

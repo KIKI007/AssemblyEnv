@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <map>
 
 namespace rigid_block
 {
@@ -32,6 +33,7 @@ namespace rigid_block
         std::vector<double> prior_;
         std::vector<double> noise_;
         std::vector<bool> valid_action_;
+        std::vector<std::vector<int>> child_states_;
 
     // compute automatically
     public:
@@ -46,6 +48,7 @@ namespace rigid_block
                  bool terminated,
                  double reward,
                  const std::vector<int> &state,
+                 const std::vector<std::vector<int>> &child_states,
                  const std::vector<double> &prior,
                  const std::vector<double> &noise,
                  const std::vector<bool> &valid);
@@ -76,9 +79,9 @@ namespace rigid_block
         double cpuct_;
 
         std::shared_ptr<MCTSNode> root_;
-
         std::vector<std::shared_ptr<MCTSNode>> current_path_;
         std::vector<int> current_path_action_;
+        std::map<std::vector<int>, std::shared_ptr<MCTSNode>> mapping_;
 
     public:
 
@@ -102,10 +105,13 @@ namespace rigid_block
                                               bool terminate,
                                               double reward,
                                               const std::vector<int> &state,
+                                              const std::vector<std::vector<int>> &child_states,
                                               const std::vector<double> &prior,
                                               const std::vector<double> &noise,
                                               const std::vector<bool> &valid) const;
 
+
+        std::shared_ptr<MCTSNode> child_node(std::shared_ptr<MCTSNode> node, int action_id);
 
         bool find_leaf(std::shared_ptr<MCTSNode> node);
 
@@ -115,6 +121,7 @@ namespace rigid_block
 
         void set_root(std::shared_ptr<MCTSNode> node) {
             root_ = std::make_shared<MCTSNode>(*node);
+            mapping_[root_->state_] = root_;
         }
 
         std::shared_ptr<MCTSNode> path_endNode() {
