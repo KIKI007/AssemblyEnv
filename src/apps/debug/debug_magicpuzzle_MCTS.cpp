@@ -12,56 +12,54 @@
 #include <Eigen/Dense>
 using namespace rigid_block;
 
-int node_ind = 0;
-
 std::vector<int> init_board(int dim){
     std::vector<int> board;
     board.resize(dim * dim, -1);
-    board[0] = 0;
-    // board[1] = 0;
-    // board[2] = 5;
-    // board[3] = 2;
+    //board[0] = 7;
+    //board[1] = 0;
+    //board[2] = 5;
+    //board[3] = 2;
     return board;
 }
 
+int board_next_number(const std::vector<int> &board) {
+    std::vector<bool> visited;
+    visited.resize(board.size(), false);
+    for(int id = 0; id < board.size(); id++) {
+        if(board[id] != -1) {
+            visited[board[id]] = true;
+        }
+    }
+    for(int id = 0; id < visited.size(); id++) {
+        if(visited[id] == false)
+            return id;
+    }
+    return -1;
+}
+
 std::vector<int> step(const std::vector<int> &board, int action_id) {
-    int pos = action_id / board.size();
-    int num = action_id % board.size();
+    int num = board_next_number(board);
     std::vector<int> new_board = board;
-    new_board[pos] = num;
+    new_board[action_id] = num;
     return new_board;
 }
 
 std::tuple<std::vector<bool>, std::vector<std::vector<int>>> valid_move(const std::vector<int> &board) {
-    int dim = std::sqrt(board.size());
-    std::vector<bool> valid_actions(board.size() * board.size());
-    valid_actions.resize(board.size() * board.size(), true);
-
-    std::vector<bool> number_exist;
-    number_exist.resize(board.size(), false);
-    for(int pos = 0; pos < board.size(); pos++)
-    {
-        if(board[pos] != -1) {
-            number_exist[board[pos]] = true;
-        }
-    }
+    std::vector<bool> valid_actions(board.size());
+    valid_actions.resize(board.size(), true);
+    int number = board_next_number(board);
 
     //remove pos that has been taken
     std::vector<std::vector<int>> child_states;
     for(int pos = 0; pos < board.size(); pos++)
     {
-        bool pos_valid = (board[pos] == -1);
-        for(int number = 0; number < board.size(); number++)
-        {
-            int ind = pos * board.size() + number;
-            valid_actions[ind] = pos_valid * (1 - number_exist[number]);
-            if(valid_actions[ind]) {
-                auto child_state = step(board, ind);
-                child_states.push_back(child_state);
-            }
-            else {
-                child_states.push_back({});
-            }
+        valid_actions[pos] = (board[pos] == -1);
+        if(valid_actions[pos]) {
+            auto child_state = step(board, pos);
+            child_states.push_back(child_state);
+        }
+        else {
+            child_states.push_back({});
         }
     }
     return {valid_actions, child_states};
@@ -82,7 +80,6 @@ std::tuple<bool, double> end_game(const std::vector<int> &board) {
     int dim = std::sqrt(board.size());
     Eigen::MatrixXi mat = matrix_board(board);
     std::vector<int> vals;
-    std::cout << mat << std::endl;
 
     //row sum
     for(int x = 0; x < dim; x++)
@@ -170,10 +167,31 @@ std::tuple<bool, double> end_game(const std::vector<int> &board) {
     }
 }
 
+std::string board_label(const std::vector<int> &board) {
+    std::string label = "";
+    int dim = std::sqrt(board.size());
+    for(int state_id = 0; state_id < board.size(); state_id++) {
+        int state = board[state_id];
+        if(state >= 0) {
+            label += std::to_string(state);
+        }
+        else {
+            label += "*";
+        }
+        if((state_id + 1) % dim == 0) {
+            label += '\n';
+        }
+        else {
+            label += " ";
+        }
+    }
+    return label;
+}
+
 
 std::shared_ptr<MCTSNode> create_node(std::shared_ptr<MCTS> tree, const std::vector<int> &board)
 {
-    int n_action = board.size() * board.size();
+    int n_action = board.size();
 
     std::vector<double> prior; prior.resize(n_action, 1.0);
     std::vector<double> noise;
@@ -182,35 +200,75 @@ std::shared_ptr<MCTSNode> create_node(std::shared_ptr<MCTS> tree, const std::vec
     auto [valid, child_states] = valid_move(board);
     auto [terminated, reward] = end_game(board);
 
-    return tree->create_node(node_ind ++, terminated, reward, board, child_states, prior, noise, valid);
+    auto node = tree->create_node(terminated, reward, board, child_states, prior, noise, valid);
+    node->label_ = board_label(board);
+    return node;
 }
 
+void sim(std::shared_ptr<MCTS> tree)
+{
+
+    if(tree->find_leaf()) {
+        auto leaf = tree->leaf_node();
+        std::vector<int> board = leaf->state_;
+        std::vector<int> new_board = step(board, tree->path_endAction());
+        auto new_node = create_node(tree, new_board);
+        tree->expand(new_node);
+    }
+
+    auto leaf = tree->leaf_node();
+    if(leaf->terminated_) {
+        tree->backward_update(leaf->reward_);
+    }
+    else {
+        //neural network
+        tree->backward_update(0);
+    }
+}
+
+std::vector<double> get_action_prob(std::shared_ptr<MCTS> tree, int num_sim) {
+    for(int id = 0; id < num_sim; id++) {
+        sim(tree);
+    }
+
+    auto root = tree->root_node();
+    std::vector<double> prob;
+    for(int action_id = 0; action_id < root->n_action_; action_id ++) {
+        prob.push_back((double) root->n_visit_[action_id] / root->tot_visit_);
+    }
+
+    return prob;
+}
+
+std::mt19937 gen(0);
 
 int main()
 {
-    int dim = 2;
-    int n_action = dim * dim * dim * dim;
-    std::shared_ptr<MCTS> tree = std::make_shared<MCTS>(n_action, 1.0);
+    int dim = 4;
+    int n_action = dim * dim;
+    std::shared_ptr<MCTS> tree = std::make_shared<MCTS>(n_action, 1.0, 1.0);
     std::vector<int> board = init_board(dim);
     std::shared_ptr<MCTSNode> root = create_node(tree, board);
     tree->set_root(root);
-    for(int sim = 0; sim < 1000; sim ++)
-    {
-        if(tree->find_leaf(tree->root_)) {
-            std::vector<int> board = tree->path_endNode()->state_;
-            std::vector<int> new_board = step(board, tree->path_endAction());
-            auto new_node = create_node(tree, new_board);
-            tree->expand(new_node);
-        }
-        std::shared_ptr<MCTSNode> leaf_node = tree->path_endNode();
-        if(leaf_node->terminated_)
-        {
-            tree->backup(tree->path_endNode()->reward_);
-        }
-        else {
-            tree->backup(0);
+    root = tree->root_;
+
+    std::vector<std::shared_ptr<MCTSNode>> path;
+    while(true) {
+        auto prob = get_action_prob(tree, 1E3);
+        std::discrete_distribution<std::size_t> d{prob.begin(), prob.end()};
+        int action_id = std::max_element(prob.begin(), prob.end()) - prob.begin();
+        //int action_id = d(gen);
+        path.push_back(tree->root_);
+        std::cout << tree->root_node()->label_ << std::endl;
+        if(tree->execute(action_id)) {
+            std::cout << tree->root_node()->label_ << std::endl;
+            break;
         }
     }
-    tree->find_leaf(tree->root_);
-    tree->save_tree("hello.dot");
+
+    MCTS_Graphviz graphviz(*tree);
+    graphviz.current_path_ = path;
+    graphviz.root_ = root;
+
+    graphviz.save_tree("hello.dot");
 }

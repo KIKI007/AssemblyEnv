@@ -68,28 +68,34 @@ NB_MODULE(py_rigidblock, m)
     .def("centroid", &rigid_block::Part::centroid)
     .def("volume", &rigid_block::Part::volume)
     .def("ee", &rigid_block::Part::eeAnchor);
+
     nb::class_<rigid_block::MCTSNode>(m, "MCTSNode")
-    .def(nb::init<bool, double, double, const std::vector<int> &, const std::vector<double> &, const std::vector<double> &, const std::vector<bool> &>())
-    .def_rw("Qsa", &rigid_block::MCTSNode::q_value_)
-    .def_rw("Psa", &rigid_block::MCTSNode::prior_)
-    .def_rw("Nsa", &rigid_block::MCTSNode::n_visit_)
-    .def_rw("Ns", &rigid_block::MCTSNode::tot_visit_)
-    .def_rw("Vs", &rigid_block::MCTSNode::valid_action_)
-    .def_rw("v", &rigid_block::MCTSNode::reward_)
-    .def_rw("state", &rigid_block::MCTSNode::state_)
+    .def(nb::init<bool, double,
+        const std::vector<int> &,
+        const std::vector<std::vector<int>> &,
+        const std::vector<double> &,
+        const std::vector<double> &,
+        const std::vector<bool> &>())
+    .def_rw("S", &rigid_block::MCTSNode::state_)
+    .def_rw("Sa", &rigid_block::MCTSNode::child_states_)
+    .def_rw("Pa", &rigid_block::MCTSNode::prior_)
     .def_rw("noise", &rigid_block::MCTSNode::noise_)
-    .def_rw("reward", &rigid_block::MCTSNode::reward_)
-    .def_rw("terminated", &rigid_block::MCTSNode::terminated_)
-    .def_rw("cpuct", &rigid_block::MCTSNode::cpuct_)
-    .def("child", &rigid_block::MCTSNode::get_child);
+    .def_rw("Na", &rigid_block::MCTSNode::n_visit_)
+    .def_rw("N", &rigid_block::MCTSNode::tot_visit_)
+    .def_rw("reward", &rigid_block::MCTSNode::reward_ )
+    .def_rw("Va", &rigid_block::MCTSNode::valid_action_)
+    .def_rw("terminated", &rigid_block::MCTSNode::terminated_);
 
     nb::class_<rigid_block::MCTS>(m, "MCTS")
-    .def(nb::init<int>())
-    .def_rw("root", &rigid_block::MCTS::root_)
-    .def("leaf", &rigid_block::MCTS::leaf)
-    .def("leaf_act", &rigid_block::MCTS::leaf_act)
+    .def(nb::init<int, double, double>())
+    .def("root_node", &rigid_block::MCTS::root_node)
+    .def("leaf_node", &rigid_block::MCTS::leaf_node)
+    .def("leaf_act", &rigid_block::MCTS::path_endAction)
     .def("set_root", &rigid_block::MCTS::set_root)
+    .def("set_root_noise", &rigid_block::MCTS::set_root_noise)
     .def("find_leaf", &rigid_block::MCTS::find_leaf)
-    .def("expand_leaf", &rigid_block::MCTS::expand_leaf)
+    .def("update", &rigid_block::MCTS::backward_update)
+    .def("expand", &rigid_block::MCTS::expand)
     .def("execute", &rigid_block::MCTS::execute);
+
 }
