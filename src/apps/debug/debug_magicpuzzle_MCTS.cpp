@@ -117,37 +117,37 @@ std::tuple<bool, double> end_game(const std::vector<int> &board) {
         }
     }
 
-    //diag right
+    // //diag right
     int val = 0;
-    for(int x = 0; x < dim; x++) {
-        int y = x;
-        if(mat(x, y) != -1) {
-            val += mat(x, y);
-        }
-        else {
-            val = -1;
-            break;
-        }
-    }
-    if(val != -1) {
-        vals.push_back(val);
-    }
-
-    //diag left
-    val = 0;
-    for(int x = 0; x < dim; x++) {
-        int y = dim - x - 1;
-        if(mat(x, y) != -1) {
-            val += mat(x, y);
-        }
-        else {
-            val = -1;
-            break;
-        }
-    }
-    if(val != -1) {
-        vals.push_back(val);
-    }
+    // for(int x = 0; x < dim; x++) {
+    //     int y = x;
+    //     if(mat(x, y) != -1) {
+    //         val += mat(x, y);
+    //     }
+    //     else {
+    //         val = -1;
+    //         break;
+    //     }
+    // }
+    // if(val != -1) {
+    //     vals.push_back(val);
+    // }
+    //
+    // //diag left
+    // val = 0;
+    // for(int x = 0; x < dim; x++) {
+    //     int y = dim - x - 1;
+    //     if(mat(x, y) != -1) {
+    //         val += mat(x, y);
+    //     }
+    //     else {
+    //         val = -1;
+    //         break;
+    //     }
+    // }
+    // if(val != -1) {
+    //     vals.push_back(val);
+    // }
 
     //check valid
     if(vals.empty()) {
@@ -244,7 +244,7 @@ std::mt19937 gen(0);
 
 int main()
 {
-    int dim = 4;
+    int dim = 3;
     int n_action = dim * dim;
     std::shared_ptr<MCTS> tree = std::make_shared<MCTS>(n_action, 1.0, 1.0);
     std::vector<int> board = init_board(dim);
@@ -254,7 +254,7 @@ int main()
 
     std::vector<std::shared_ptr<MCTSNode>> path;
     while(true) {
-        auto prob = get_action_prob(tree, 1E3);
+        auto prob = get_action_prob(tree, 500);
         std::discrete_distribution<std::size_t> d{prob.begin(), prob.end()};
         int action_id = std::max_element(prob.begin(), prob.end()) - prob.begin();
         //int action_id = d(gen);
