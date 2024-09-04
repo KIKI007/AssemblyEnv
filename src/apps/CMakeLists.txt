@@ -1,2 +1,2 @@
 add_subdirectory(pyRigidBlock)
-add_subdirectory(debug)
+#add_subdirectory(debug)

@@ -255,7 +255,7 @@ namespace rigid_block
 
             if(status[partIDA] == 0 || status[partIDB] == 0)
             {
-                for (int jd = 0; jd < fdim() - 2; jd++)
+                for (int jd = 0; jd < fdim(); jd++)
                 {
                     vind.push_back(id * fdim() + jd);
                     upbnd.push_back(0);

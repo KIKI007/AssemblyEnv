@@ -2,9 +2,9 @@
 // Created by Ziqi Wang on 11.04.2024.
 //
 
-#include "rigid_block/Part.h"
-#include "rigid_block/Assembly.h"
-#include <rigid_block/MCTS.h>
+#include "../libs/rigid_block/include/rigid_block/Part.h"
+#include "../libs/rigid_block/include/rigid_block/Assembly.h"
+#include <../libs/rigid_block/include/rigid_block/MCTS.h>
 #include <numeric>
 #include <iostream>
 #include <ctime>
@@ -210,7 +210,7 @@ void sim(std::shared_ptr<MCTS> tree)
 
     if(tree->find_leaf()) {
         auto leaf = tree->leaf_node();
-        std::vector<int> board = leaf->state_;
+        std::vector<int> board = leaf->S();
         std::vector<int> new_board = step(board, tree->path_endAction());
         auto new_node = create_node(tree, new_board);
         tree->expand(new_node);

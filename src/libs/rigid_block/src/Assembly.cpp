@@ -6,6 +6,7 @@
 #include "rigid_block/collision.h"
 #include "util/PolyPolyBoolean.h"
 #include "util/ConvexHull2D.h"
+#include <iostream>
 
 namespace rigid_block
 {
@@ -150,6 +151,12 @@ namespace rigid_block
         contacts.clear();
         for(int id = 0; id < hull_points.size(); id++) {
             ContactFace face;
+
+            Eigen::Vector3d pt(0, 0 ,0);
+            for(auto hpt: hull_points[id])
+                pt += hpt;
+            pt /= hull_points[id].size();
+
             face.points = hull_points[id];
             face.normal = hull_normals[id];
             contacts.push_back(face);

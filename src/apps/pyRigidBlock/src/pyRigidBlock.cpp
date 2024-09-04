@@ -6,7 +6,10 @@
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/eigen/sparse.h>
 #include <nanobind/stl/vector.h>
-#include <rigid_block/MCTS.h>
+
+#include <mcts/MCTSNode.h>
+#include <mcts/MCTS.h>
+#include <mcts/MCTS_Graphviz.h>
 
 #include <iostream>
 namespace nb = nanobind;
@@ -69,33 +72,40 @@ NB_MODULE(py_rigidblock, m)
     .def("volume", &rigid_block::Part::volume)
     .def("ee", &rigid_block::Part::eeAnchor);
 
-    nb::class_<rigid_block::MCTSNode>(m, "MCTSNode")
-    .def(nb::init<bool, double,
+    nb::class_<mcts::MCTSNode>(m, "MCTSNode")
+    .def(nb::init<bool, double, double,
         const std::vector<int> &,
-        const std::vector<std::vector<int>> &,
         const std::vector<double> &,
         const std::vector<double> &,
-        const std::vector<bool> &>())
-    .def_rw("S", &rigid_block::MCTSNode::state_)
-    .def_rw("Sa", &rigid_block::MCTSNode::child_states_)
-    .def_rw("Pa", &rigid_block::MCTSNode::prior_)
-    .def_rw("noise", &rigid_block::MCTSNode::noise_)
-    .def_rw("Na", &rigid_block::MCTSNode::n_visit_)
-    .def_rw("N", &rigid_block::MCTSNode::tot_visit_)
-    .def_rw("reward", &rigid_block::MCTSNode::reward_ )
-    .def_rw("Va", &rigid_block::MCTSNode::valid_action_)
-    .def_rw("terminated", &rigid_block::MCTSNode::terminated_);
+        const std::vector<int> &>())
+    .def_rw("label", &mcts::MCTSNode::label_)
+    .def("s", &mcts::MCTSNode::s)
+    .def("sa", &mcts::MCTSNode::sa)
+    .def("prior", &mcts::MCTSNode::prior)
+    .def("noise", &mcts::MCTSNode::noise)
+    .def("na", &mcts::MCTSNode::na)
+    .def("n", &mcts::MCTSNode::N)
+    .def("v", &mcts::MCTSNode::v)
+    .def("add_child", &mcts::MCTSNode::add_child)
+    .def("update_qa", &mcts::MCTSNode::update_qa)
+    .def("update_na", &mcts::MCTSNode::update_na)
+    .def("update_noise", &mcts::MCTSNode::update_noise)
+    .def_rw("reward", &mcts::MCTSNode::reward_ )
+    .def_rw("terminated", &mcts::MCTSNode::terminated_);
 
-    nb::class_<rigid_block::MCTS>(m, "MCTS")
-    .def(nb::init<int, double, double>())
-    .def("root_node", &rigid_block::MCTS::root_node)
-    .def("leaf_node", &rigid_block::MCTS::leaf_node)
-    .def("leaf_act", &rigid_block::MCTS::path_endAction)
-    .def("set_root", &rigid_block::MCTS::set_root)
-    .def("set_root_noise", &rigid_block::MCTS::set_root_noise)
-    .def("find_leaf", &rigid_block::MCTS::find_leaf)
-    .def("update", &rigid_block::MCTS::backward_update)
-    .def("expand", &rigid_block::MCTS::expand)
-    .def("execute", &rigid_block::MCTS::execute);
+    nb::class_<mcts::MCTS>(m, "MCTS")
+    .def(nb::init<>())
+    .def("new_node", &mcts::MCTS::new_node)
+    .def("add_child", &mcts::MCTS::add_child)
+    .def("current_root", &mcts::MCTS::current_root)
+    .def("set_root", &mcts::MCTS::set_root)
+    .def("find_leaf", &mcts::MCTS::find_leaf)
+    .def("update", &mcts::MCTS::update)
+    .def("save", &mcts::MCTS::save)
+    .def("reload", &mcts::MCTS::reload)
+    .def("execute", &mcts::MCTS::execute);
 
+    nb::class_<mcts::MCTS_Graphviz>(m, "MCTS_Graphviz")
+    .def(nb::init<const mcts::MCTS &>())
+    .def("save_tree", &mcts::MCTS_Graphviz::save_tree);
 }

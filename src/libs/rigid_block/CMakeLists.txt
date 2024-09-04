@@ -8,6 +8,7 @@ file(
         GLOB
         CRL_SOURCES #
         "${CMAKE_CURRENT_SOURCE_DIR}/include/rigid_block/*.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/mcts/*.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
